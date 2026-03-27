@@ -8,10 +8,13 @@
 
   <ItemGroup>
     <Folder Include="Exceptions\" />
-    <Folder Include="Middlewares\" />
     <Folder Include="Extensions\" />
     <Folder Include="Messaging\" />
-    <Folder Include="Seedwork\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
   </ItemGroup>
 
 </Project>
