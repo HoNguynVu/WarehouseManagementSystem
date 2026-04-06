@@ -10,9 +10,9 @@ namespace SharedLibrary.Seedwork
     // Thêm TId để linh hoạt kiểu dữ liệu của Khóa chính (int, string, Guid,...)
     public interface IGenericInterface<T, TId> where T : class
     {
-        Task<T> CreateAsync(T entity);
-        Task<T> UpdateAsync(T entity);
-        Task<bool> DeleteAsync(T entity);
+        void Create(T entity);
+        void Update(T entity);
+        void Delete(T entity);
         Task<IEnumerable<T>> GetAllAsync();
         Task<T?> GetByIdAsync(TId id);
     }
