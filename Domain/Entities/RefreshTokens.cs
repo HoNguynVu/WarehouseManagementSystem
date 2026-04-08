@@ -12,7 +12,7 @@ namespace Domain.Entities
         public string Token { get; set; } = string.Empty;
         public DateTime ExpirationTime { get; set; }
         public DateTime RevokedAt { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
         public string AccountId { get; set; } = string.Empty;
         public Accounts Account { get; set; }
     }
