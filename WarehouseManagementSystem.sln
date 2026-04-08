@@ -9,13 +9,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{02
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IdentityService", "IdentityService", "{C05C7C79-D182-4F14-9917-65B9A968E1A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csproj", "{EC0B5085-226D-4504-891D-40314B81B6EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Services\IdentityService\Domain\Domain.csproj", "{EC0B5085-226D-4504-891D-40314B81B6EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infracstructure", "Infracstructure\Infracstructure.csproj", "{C90D34FF-EDC5-4D61-A76E-45D2149C74CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infracstructure", "Services\IdentityService\Infracstructure\Infracstructure.csproj", "{C90D34FF-EDC5-4D61-A76E-45D2149C74CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{83C6D6A1-7B9F-4A10-88C0-8357ADAEADF9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Services\IdentityService\Application\Application.csproj", "{83C6D6A1-7B9F-4A10-88C0-8357ADAEADF9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "API\API.csproj", "{AA455BA6-6A1F-48FD-AABC-A4275671A4C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "Services\IdentityService\API\API.csproj", "{AA455BA6-6A1F-48FD-AABC-A4275671A4C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
