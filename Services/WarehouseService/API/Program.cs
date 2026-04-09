@@ -1,4 +1,8 @@
+using Application.Interfaces;
+using Application.Services;
+using Domain.Interfaces;
 using Infrastructure.Data;
+using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +16,9 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<WarehouseDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb")));
+
+builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 
 var app = builder.Build();
 
