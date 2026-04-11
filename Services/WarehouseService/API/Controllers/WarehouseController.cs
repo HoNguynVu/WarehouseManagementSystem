@@ -51,5 +51,27 @@ namespace API.Controllers
 
             return Ok(response);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, UpdateWarehouseDTO dto)
+        {
+            var response = await _warehouseService.UpdateWarehouseAsync(id, dto);
+            if (!response.IsSuccess)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var response = await _warehouseService.DeleteWarehouseAsync(id);
+            if (!response.IsSuccess)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
     }
 }

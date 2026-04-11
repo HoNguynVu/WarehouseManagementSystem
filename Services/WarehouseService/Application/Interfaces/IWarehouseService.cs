@@ -8,5 +8,7 @@ namespace Application.Interfaces
         Task<ApiResponse<Domain.Entities.Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto);
         Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync();
         Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id);
+        Task<ApiResponse<WarehouseDTO>> UpdateWarehouseAsync(string id, UpdateWarehouseDTO warehouseDto);
+        Task<ApiResponse<bool>> DeleteWarehouseAsync(string id);
     }
 }

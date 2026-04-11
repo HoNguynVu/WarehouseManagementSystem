@@ -12,6 +12,9 @@ namespace Application.Mappings
             CreateMap<CreateWarehouseDTO, Warehouse>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
+            CreateMap<UpdateWarehouseDTO, Warehouse>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
         }
     }
 }

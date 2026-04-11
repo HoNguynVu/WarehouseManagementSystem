@@ -49,5 +49,40 @@ namespace Application.Services
             var dto = _mapper.Map<WarehouseDTO>(warehouse);
             return ApiResponse<WarehouseDTO>.Success(dto, "Lấy thông tin kho hàng thành công.");
         }
+
+        public async Task<ApiResponse<WarehouseDTO>> UpdateWarehouseAsync(string id, UpdateWarehouseDTO warehouseDto)
+        {
+            var existingWarehouse = await _warehouseRepository.GetByIdAsync(id);
+            if (existingWarehouse == null)
+            {
+                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}");
+            }
+            _mapper.Map(warehouseDto, existingWarehouse);
+            existingWarehouse.UpdatedAt = DateTime.UtcNow;
+            _warehouseRepository.Update(existingWarehouse);
+            var updated = await _warehouseRepository.SaveChangeAsync();
+            if (!updated)
+            {
+                return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.");
+            }
+            var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
+            return ApiResponse<WarehouseDTO>.Success(dto, "Cập nhật kho hàng thành công.");
+        }
+
+        public async Task<ApiResponse<bool>> DeleteWarehouseAsync(string id)
+        {
+            var existingWarehouse = await _warehouseRepository.GetByIdAsync(id);
+            if (existingWarehouse == null)
+            {
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {id}");
+            }
+            _warehouseRepository.Delete(existingWarehouse);
+            var deleted = await _warehouseRepository.SaveChangeAsync();
+            if (!deleted)
+            {
+                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.");
+            }
+            return ApiResponse<bool>.Success(true, "Xóa kho hàng thành công.");
+        }
     }
 }

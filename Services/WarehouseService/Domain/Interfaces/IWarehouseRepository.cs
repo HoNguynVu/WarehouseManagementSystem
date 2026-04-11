@@ -8,5 +8,7 @@ namespace Domain.Interfaces
         Task<bool> SaveChangeAsync();
         Task<IEnumerable<Warehouse>> GetAllAsync();
         Task<Warehouse?> GetByIdAsync(string id);
+        void Update(Warehouse warehouse);
+        void Delete(Warehouse warehouse);
     }
 }

@@ -28,5 +28,13 @@ namespace Infrastructure.Repositories
         {
             return await _context.Warehouses.FirstOrDefaultAsync(w => w.Id == id);
         }
+        public void Update(Warehouse warehouse)
+        {
+            _context.Warehouses.Update(warehouse);
+        }
+        public void Delete(Warehouse warehouse)
+        {
+            _context.Warehouses.Remove(warehouse);
+        }
     }
 }
