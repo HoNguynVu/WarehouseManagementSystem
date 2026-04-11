@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Application.Mappings;
 using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Data;
@@ -34,6 +35,11 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<WarehouseDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb")));
+
+builder.Services.AddAutoMapper(config =>
+{
+    config.AddProfile<Application.Mappings.WarehouseProfile>();
+});
 
 builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();

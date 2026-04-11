@@ -2,28 +2,27 @@
 using Application.DTOs;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
-using System.Xml;
+using AutoMapper;
 
 namespace Application.Services
 {
     public class WarehouseService : IWarehouseService
     {
         private readonly IWarehouseRepository _warehouseRepository;
-        public WarehouseService(IWarehouseRepository warehouseRepository)
+        private readonly IMapper _mapper;
+        public WarehouseService(IWarehouseRepository warehouseRepository, IMapper mapper)
         {
             _warehouseRepository = warehouseRepository;
+            _mapper = mapper;
         }
 
         public async Task<ApiResponse<Domain.Entities.Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto)
         {
-            var warehouse = new Domain.Entities.Warehouse
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = warehouseDto.Name,
-                Address = warehouseDto.Address,
-                Capacity = warehouseDto.Capacity,
-                CreatedAt = DateTime.UtcNow,
-            };
+            var warehouse = _mapper.Map<Domain.Entities.Warehouse>(warehouseDto);
+
+            warehouse.Id = Guid.NewGuid().ToString();
+            warehouse.CreatedAt = DateTime.UtcNow;
+
             await _warehouseRepository.AddAsync(warehouse);
             var saved = await _warehouseRepository.SaveChangeAsync();
             if (!saved)
@@ -36,14 +35,7 @@ namespace Application.Services
         public async Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync()
         {
             var warehouses = await _warehouseRepository.GetAllAsync();
-            var dtos = warehouses.Select(w => new WarehouseDTO
-            {
-                Id = w.Id,
-                Name = w.Name,
-                Address = w.Address,
-                Capacity = w.Capacity,
-                CreatedAt = w.CreatedAt
-            }).ToList();
+            var dtos = _mapper.Map<IEnumerable<WarehouseDTO>>(warehouses);
             return ApiResponse<IEnumerable<WarehouseDTO>>.Success(dtos, "Lấy danh sách kho hàng thành công.");
         }
 
@@ -54,14 +46,7 @@ namespace Application.Services
             {
                 return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}");
             }
-            var dto = new WarehouseDTO
-            {
-                Id = warehouse.Id,
-                Name = warehouse.Name,
-                Address = warehouse.Address,
-                Capacity = warehouse.Capacity,
-                CreatedAt = warehouse.CreatedAt
-            };
+            var dto = _mapper.Map<WarehouseDTO>(warehouse);
             return ApiResponse<WarehouseDTO>.Success(dto, "Lấy thông tin kho hàng thành công.");
         }
     }
