@@ -12,6 +12,7 @@ namespace Domain.Entities
         public string Code { get; set; } = string.Empty;
         public DateTime ExpirationTime { get; set; }
         public bool IsActive { get; set; }
+        public string Purpose { get; set; } = string.Empty; 
         public string AccountId { get; set; } = string.Empty;
         public Accounts Account { get; set; }
     }

@@ -37,7 +37,7 @@ namespace Application.Helpers
                 
                         <div class='otp-box'>{otp}</div>
                 
-                        <p>Mã này sẽ hết hạn trong vòng <strong>5 phút</strong>.</p>
+                        <p>Mã này sẽ hết hạn trong vòng <strong>10 phút</strong>.</p>
                         <p style='color: #dc3545;'><strong>Lưu ý:</strong> Vui lòng không chia sẻ mã này cho bất kỳ ai, kể cả nhân viên quản lý.</p>
                 
                         <p>Trân trọng,<br>Đội ngũ quản lý Warehouse System.</p>

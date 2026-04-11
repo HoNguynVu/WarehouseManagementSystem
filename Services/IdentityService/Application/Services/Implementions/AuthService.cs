@@ -84,6 +84,7 @@ namespace Application.Services.Implementions
                 Id = IdGenerator.GenerateId(),
                 Code = AuthHelpers.GenerateOTP(),
                 AccountId = new_account.Id,
+                Purpose = OtpPurposes.EmailVerification,
                 ExpirationTime = DateTime.UtcNow.AddMinutes(10),
                 CreatedAt = DateTime.UtcNow
             };
@@ -111,6 +112,42 @@ namespace Application.Services.Implementions
             }
 
             return ApiResponse<string>.Success(new_account.Id, "Account created successfully. Please check your email.", 201);
+        }
+
+        public async Task<ApiResponse<string>> VerifyOtpAsync(OtpVerifyRequest request)
+        {
+            if (request == null)
+            {
+                return ApiResponse<string>.Failure("Invalid request.");
+            }
+
+            var account = await _authUow.Accounts.GetByIdAsync(request.AccountId);
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+            var otp = await _authUow.Otps.GetByAccountIdAndPurposeAsync(account.Id, OtpPurposes.EmailVerification);
+            if (otp == null || otp.Code != request.Otp || otp.ExpirationTime < DateTime.UtcNow)
+            {
+                return ApiResponse<string>.Failure("Invalid or expired OTP.", 400);
+            }
+
+            otp.IsActive = false;
+            account.Status = AccountStatus.Active;
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Otps.Update(otp);
+                _authUow.Accounts.Update(account);
+                await _authUow.CommitAsync();
+                return ApiResponse<string>.Success(account.Id, "Email verified successfully.", 200);
+
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
         }
     }
 }
