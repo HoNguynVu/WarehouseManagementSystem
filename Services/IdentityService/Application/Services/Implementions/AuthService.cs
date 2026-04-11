@@ -1,4 +1,4 @@
-﻿using Application.DTOs;
+﻿using Application.DTOs.Requests;
 using Application.Helpers;
 using Application.Services.Interfaces;
 using Domain.Entities;
@@ -112,6 +112,52 @@ namespace Application.Services.Implementions
             }
 
             return ApiResponse<string>.Success(new_account.Id, "Account created successfully. Please check your email.", 201);
+        }
+
+        public async Task<ApiResponse<string>> ResendOtpVerifyAsync(string email)
+        {
+            if (email == null)
+            {
+                return ApiResponse<string>.Failure("Email is required.", 404);
+            }
+            var account = await _authUow.Accounts.GetByEmailAsync(email);
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+
+            var otp = new Otps
+            {
+                Id = IdGenerator.GenerateId(),
+                Code = AuthHelpers.GenerateOTP(),
+                Purpose = OtpPurposes.EmailVerification,
+                ExpirationTime = DateTime.UtcNow.AddMinutes(10),
+                CreatedAt = DateTime.UtcNow,
+                AccountId = account.Id
+            };
+
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Otps.Create(otp);
+                await _authUow.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+            
+            try
+            {
+                await _emailService.SendVerificationEmail(account.Email, otp.Code);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.Failure($"Failed to send verification email: {ex.Message}", 500);
+            }
+
+            return ApiResponse<string>.Success(account.Id, "OTP resent successfully. Please check your email.", 200);
         }
 
         public async Task<ApiResponse<string>> VerifyOtpAsync(OtpVerifyRequest request)
