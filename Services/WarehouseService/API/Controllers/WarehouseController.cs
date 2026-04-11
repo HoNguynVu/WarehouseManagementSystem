@@ -16,12 +16,40 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(WarehouseDTO dto)
+        public async Task<IActionResult> Create(CreateWarehouseDTO dto)
         {
-            var result = await _warehouseService.CreateWarehouseAsync(dto);
-            if (!result) return BadRequest("Không thể tạo kho hàng.");
+            var response = await _warehouseService.CreateWarehouseAsync(dto);
 
-            return Ok("Tạo kho hàng thành công!");
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var response = await _warehouseService.GetAllWarehousesAsync();
+            if (!response.IsSuccess)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var response = await _warehouseService.GetWarehouseByIdAsync(id);
+
+            if (!response.IsSuccess)
+            {
+                return NotFound(response);
+            }
+
+            return Ok(response);
         }
     }
 }

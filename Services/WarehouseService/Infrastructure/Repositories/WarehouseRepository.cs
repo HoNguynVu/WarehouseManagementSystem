@@ -1,6 +1,7 @@
 ﻿using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories
 {
@@ -18,6 +19,14 @@ namespace Infrastructure.Repositories
         public async Task<bool> SaveChangeAsync()
         {
             return await _context.SaveChangesAsync() > 0;
+        }
+        public async Task<IEnumerable<Warehouse>> GetAllAsync()
+        {
+            return await _context.Warehouses.ToListAsync();
+        }
+        public async Task<Warehouse?> GetByIdAsync(string id)
+        {
+            return await _context.Warehouses.FirstOrDefaultAsync(w => w.Id == id);
         }
     }
 }

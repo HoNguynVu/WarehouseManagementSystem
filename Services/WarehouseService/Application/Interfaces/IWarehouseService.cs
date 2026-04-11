@@ -1,9 +1,12 @@
 ﻿using Application.DTOs;
+using SharedLibrary.Responses;
 
 namespace Application.Interfaces
 {
     public interface IWarehouseService
     {
-        Task<bool> CreateWarehouseAsync(WarehouseDTO warehouseDto);
+        Task<ApiResponse<Domain.Entities.Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto);
+        Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync();
+        Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id);
     }
 }
