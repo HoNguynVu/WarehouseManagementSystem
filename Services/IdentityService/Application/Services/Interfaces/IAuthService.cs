@@ -13,5 +13,9 @@ namespace Application.Services.Interfaces
         Task<ApiResponse<string>> SignUpAsync(SignUpRequest request);
         Task<ApiResponse<string>> ResendOtpVerifyAsync(string accountId);
         Task<ApiResponse<string>> VerifyOtpAsync(OtpVerifyRequest request);
+        Task<ApiResponse<string>> ResetPasswordRequestAsync(string email);
+        Task<ApiResponse<string>> ResendOtpResetAsync(string accountId);
+        Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request);
+        Task<ApiResponse<string>> VerifyResetOtpAsync(OtpVerifyRequest request);
     }
 }

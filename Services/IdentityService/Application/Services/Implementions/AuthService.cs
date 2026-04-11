@@ -250,8 +250,120 @@ namespace Application.Services.Implementions
             {
                 return ApiResponse<string>.Failure($"Failed to send password reset email: {ex.Message}", 500);
             }
-            
+
             return ApiResponse<string>.Success(account.Id, "Password reset email sent successfully. Please check your email.", 200);
         }
+
+        public async Task<ApiResponse<string>> ResendOtpResetAsync(string accountId)
+        {
+            if (accountId == null)
+            {
+                return ApiResponse<string>.Failure("Account ID is required.", 404);
+            }
+            var account = await _authUow.Accounts.GetByIdAsync(accountId);
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+
+            var otp = new Otps
+            {
+                Id = IdGenerator.GenerateId(),
+                Code = AuthHelpers.GenerateOTP(),
+                Purpose = OtpPurposes.PasswordReset,
+                ExpirationTime = DateTime.UtcNow.AddMinutes(10),
+                CreatedAt = DateTime.UtcNow,
+                AccountId = account.Id
+            };
+
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Otps.Create(otp);
+                await _authUow.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+
+            try
+            {
+                await _emailService.SendVerificationEmail(account.Email, otp.Code);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.Failure($"Failed to send password reset email: {ex.Message}", 500);
+            }
+
+            return ApiResponse<string>.Success(account.Id, "OTP resent successfully. Please check your email.", 200);
+        }
+
+        public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            if (request == null)
+            {
+                return ApiResponse<string>.Failure("Invalid request.");
+            }
+            var account = await _authUow.Accounts.GetByIdAsync(request.AccountId);
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+
+            var newPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            account.Password = newPassword;
+
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Accounts.Update(account);
+                await _authUow.CommitAsync();
+                return ApiResponse<string>.Success(account.Id, "Password reset successfully.", 200);
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ApiResponse<string>> VerifyResetOtpAsync(OtpVerifyRequest request)
+        {
+            if (request == null)
+            {
+                return ApiResponse<string>.Failure("Invalid request.");
+            }
+
+            var account = await _authUow.Accounts.GetByIdAsync(request.AccountId);
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+            var otp = await _authUow.Otps.GetByAccountIdAndPurposeAsync(account.Id, OtpPurposes.PasswordReset);
+            if (otp == null || otp.Code != request.Otp || otp.ExpirationTime < DateTime.UtcNow)
+            {
+                return ApiResponse<string>.Failure("Invalid or expired OTP.", 400);
+            }
+
+            otp.IsActive = false;
+            account.Status = AccountStatus.Active;
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Otps.Update(otp);
+                _authUow.Accounts.Update(account);
+                await _authUow.CommitAsync();
+                return ApiResponse<string>.Success(account.Id, "OTP verified successfully.", 200);
+
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+        }
+
     }
 }
