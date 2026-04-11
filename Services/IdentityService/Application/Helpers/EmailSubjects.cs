@@ -14,5 +14,12 @@ namespace Application.Helpers
             public const string Title = "Account Verification";
             public const string Purpose = "Account verification";
         }
+
+        public class PasswordReset
+        {
+            public const string Subject = "Reset Your Password";
+            public const string Title = "Password Reset";
+            public const string Purpose = "Password reset";
+        }
     }
 }

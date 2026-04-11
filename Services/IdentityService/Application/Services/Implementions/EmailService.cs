@@ -17,7 +17,7 @@ namespace Application.Services.Implementions
     {
         private readonly EmailSettings _emailSettings;
         private readonly EmailHelpers _emailHelpers;
-        public EmailService(IOptions<EmailSettings> emailSettings, EmailHelpers emailHelpers) 
+        public EmailService(IOptions<EmailSettings> emailSettings, EmailHelpers emailHelpers)
         {
             _emailSettings = emailSettings.Value;
             _emailHelpers = emailHelpers;
@@ -54,6 +54,20 @@ namespace Application.Services.Implementions
 
             emailMessage.Body = bodyBuilder.ToMessageBody();
             await SendEmailAsync(emailMessage, EmailSubjects.AccountVerification.Purpose);
+        }
+
+        public async Task SendPasswordResetEmail(string email, string otp)
+        {
+            var emailMessage = new MimeMessage();
+            emailMessage.From.Add(new MailboxAddress("Warehouse System", _emailSettings.From));
+            emailMessage.To.Add(MailboxAddress.Parse(email));
+            emailMessage.Subject = EmailSubjects.PasswordReset.Subject;
+
+            var bodyBuilder = new BodyBuilder();
+            bodyBuilder.HtmlBody = _emailHelpers.CreateEmailByTemplate(EmailSubjects.PasswordReset.Title, otp, EmailSubjects.PasswordReset.Purpose);
+
+            emailMessage.Body = bodyBuilder.ToMessageBody();
+            await SendEmailAsync(emailMessage, EmailSubjects.PasswordReset.Purpose);
         }
     }
 }

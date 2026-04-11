@@ -9,5 +9,6 @@ namespace Application.Services.Interfaces
     public interface IEmailService
     {
         Task SendVerificationEmail(string email, string otp);
+        Task SendPasswordResetEmail(string email, string otp);
     }
 }

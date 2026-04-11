@@ -11,7 +11,7 @@ namespace Application.Services.Interfaces
     public interface IAuthService
     {
         Task<ApiResponse<string>> SignUpAsync(SignUpRequest request);
-        Task<ApiResponse<string>> ResendOtpVerifyAsync(string email);
+        Task<ApiResponse<string>> ResendOtpVerifyAsync(string accountId);
         Task<ApiResponse<string>> VerifyOtpAsync(OtpVerifyRequest request);
     }
 }

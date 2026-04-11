@@ -114,13 +114,13 @@ namespace Application.Services.Implementions
             return ApiResponse<string>.Success(new_account.Id, "Account created successfully. Please check your email.", 201);
         }
 
-        public async Task<ApiResponse<string>> ResendOtpVerifyAsync(string email)
+        public async Task<ApiResponse<string>> ResendOtpVerifyAsync(string accountId)
         {
-            if (email == null)
+            if (accountId == null)
             {
-                return ApiResponse<string>.Failure("Email is required.", 404);
+                return ApiResponse<string>.Failure("Account ID is required.", 404);
             }
-            var account = await _authUow.Accounts.GetByEmailAsync(email);
+            var account = await _authUow.Accounts.GetByIdAsync(accountId);
             if (account == null)
             {
                 return ApiResponse<string>.Failure("Account not found.", 404);
@@ -147,7 +147,7 @@ namespace Application.Services.Implementions
                 await _authUow.RollbackAsync();
                 return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
             }
-            
+
             try
             {
                 await _emailService.SendVerificationEmail(account.Email, otp.Code);
@@ -194,6 +194,64 @@ namespace Application.Services.Implementions
                 await _authUow.RollbackAsync();
                 return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
             }
+        }
+
+        public async Task<ApiResponse<string>> ResetPasswordRequestAsync(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return ApiResponse<string>.Failure("Email is required.", 404);
+            }
+
+            var account = await _authUow.Accounts.GetByEmailAsync(email);
+
+            if (account == null)
+            {
+                return ApiResponse<string>.Failure("Account not found.", 404);
+            }
+
+            if (account.Status == AccountStatus.EmailUnverified || account.Status == AccountStatus.Inactive)
+            {
+                return ApiResponse<string>.Failure("Account is not active. Please verify your email first.", 403);
+            }
+
+            if (account.Status == AccountStatus.Suspended)
+            {
+                return ApiResponse<string>.Failure("Account is suspended. Please contact support.", 403);
+            }
+
+            var otp = new Otps
+            {
+                Id = IdGenerator.GenerateId(),
+                Code = AuthHelpers.GenerateOTP(),
+                Purpose = OtpPurposes.PasswordReset,
+                ExpirationTime = DateTime.UtcNow.AddMinutes(10),
+                CreatedAt = DateTime.UtcNow,
+                AccountId = account.Id
+            };
+
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.Otps.Create(otp);
+                await _authUow.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+
+            try
+            {
+                await _emailService.SendPasswordResetEmail(account.Email, otp.Code);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.Failure($"Failed to send password reset email: {ex.Message}", 500);
+            }
+            
+            return ApiResponse<string>.Success(account.Id, "Password reset email sent successfully. Please check your email.", 200);
         }
     }
 }
