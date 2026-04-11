@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace Application.Helpers
 {
-    public class AuthHelpers
+    public static class AuthHelpers
     {
-        private string GenerateRefreshToken()
+        private static string GenerateRefreshToken()
         {
             var randomNumber = new byte[64];
             using var rng = RandomNumberGenerator.Create();
@@ -19,7 +19,7 @@ namespace Application.Helpers
             return Convert.ToBase64String(randomNumber);
         }
 
-        public RefreshTokens CreateRefreshToken(string accountId)
+        public static RefreshTokens CreateRefreshToken(string accountId)
         {
             return new RefreshTokens
             {
@@ -31,5 +31,14 @@ namespace Application.Helpers
             };
         }
 
+        public static string GenerateOTP()
+        {
+            var randomNumber = new byte[6];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            int otpValue = BitConverter.ToInt32(randomNumber, 0) % 1000000;
+            otpValue = Math.Abs(otpValue);
+            return otpValue.ToString("D6");
+        }
     }
 }
