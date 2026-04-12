@@ -73,5 +73,18 @@ namespace API.Controllers
             }
             return Ok(response);
         }
+
+        [HttpPost("{warehouseId}/inventory")]
+        public async Task<IActionResult> AddInventory(string warehouseId, [FromBody] AddInventoryDTO dto)
+        {
+            var response = await _warehouseService.AddInventoryToWarehouseAsync(warehouseId, dto);
+
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response); 
+            }
+
+            return Ok(response);
+        }
     }
 }

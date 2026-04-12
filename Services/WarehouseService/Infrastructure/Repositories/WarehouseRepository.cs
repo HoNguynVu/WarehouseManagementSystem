@@ -36,5 +36,11 @@ namespace Infrastructure.Repositories
         {
             _context.Warehouses.Remove(warehouse);
         }
+        public async Task<Warehouse?> GetWarehouseWithInventoriesAsync(string id)
+        {
+            return await _context.Warehouses
+                .Include(w => w.Inventories)
+                .FirstOrDefaultAsync(w => w.Id == id);
+        }
     }
 }

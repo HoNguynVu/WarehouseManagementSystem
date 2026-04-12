@@ -1,8 +1,9 @@
-﻿using Application.Interfaces;
-using Application.DTOs;
+﻿using Application.DTOs;
+using Application.Interfaces;
+using AutoMapper;
+using Domain.Entities;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
-using AutoMapper;
 
 namespace Application.Services
 {
@@ -27,9 +28,9 @@ namespace Application.Services
             var saved = await _warehouseRepository.SaveChangeAsync();
             if (!saved)
             {
-                return ApiResponse<Domain.Entities.Warehouse>.Failure("Failed to create warehouse.");
+                return ApiResponse<Domain.Entities.Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.");
             }
-            return ApiResponse<Domain.Entities.Warehouse>.Success(warehouse, "Warehouse created successfully.");
+            return ApiResponse<Domain.Entities.Warehouse>.Success(warehouse, "Tạo kho hàng thành công.");
         }
 
         public async Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync()
@@ -41,7 +42,7 @@ namespace Application.Services
 
         public async Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id)
         {
-            var warehouse = await _warehouseRepository.GetByIdAsync(id);
+            var warehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(id);
             if (warehouse == null)
             {
                 return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}");
@@ -83,6 +84,34 @@ namespace Application.Services
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.");
             }
             return ApiResponse<bool>.Success(true, "Xóa kho hàng thành công.");
+        }
+        public async Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto)
+        {
+            var existingWarehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(warehouseId);
+            if (existingWarehouse == null)
+            {
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}");
+            }
+            var currentUsedCapacity = existingWarehouse.Inventories.Sum(i => i.Quantity);
+
+            if (currentUsedCapacity + inventoryDto.Quantity > existingWarehouse.Capacity)
+            {
+                var remaining = existingWarehouse.Capacity - currentUsedCapacity;
+                return ApiResponse<bool>.Failure($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}");
+            }
+
+            var newInventory = _mapper.Map<Inventory>(inventoryDto);
+            newInventory.Id = Guid.NewGuid().ToString();
+            newInventory.CreatedAt = DateTime.UtcNow;
+            newInventory.WarehouseId = warehouseId;
+
+            existingWarehouse.Inventories.Add(newInventory);
+            var saved = await _warehouseRepository.SaveChangeAsync();
+            if(!saved)
+            {
+                return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
+            }
+            return ApiResponse<bool>.Success(true, "Nhập hàng vào kho thành công.");
         }
     }
 }

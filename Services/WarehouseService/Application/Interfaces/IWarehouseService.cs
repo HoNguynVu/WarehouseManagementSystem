@@ -10,5 +10,6 @@ namespace Application.Interfaces
         Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id);
         Task<ApiResponse<WarehouseDTO>> UpdateWarehouseAsync(string id, UpdateWarehouseDTO warehouseDto);
         Task<ApiResponse<bool>> DeleteWarehouseAsync(string id);
+        Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto);
     }
 }

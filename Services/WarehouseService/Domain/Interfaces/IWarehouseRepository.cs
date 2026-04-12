@@ -10,5 +10,6 @@ namespace Domain.Interfaces
         Task<Warehouse?> GetByIdAsync(string id);
         void Update(Warehouse warehouse);
         void Delete(Warehouse warehouse);
+        Task <Warehouse?> GetWarehouseWithInventoriesAsync(string id);
     }
 }

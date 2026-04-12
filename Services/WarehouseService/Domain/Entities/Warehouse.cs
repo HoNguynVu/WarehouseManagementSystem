@@ -8,5 +8,6 @@ namespace Domain.Entities
         public string Address { get; set; } = string.Empty;
         public double Capacity { get; set; }
         public string Status { get; set; } = "Active";
+        public virtual ICollection<Inventory> Inventories { get; set; } = new List<Inventory>();
     }
 }

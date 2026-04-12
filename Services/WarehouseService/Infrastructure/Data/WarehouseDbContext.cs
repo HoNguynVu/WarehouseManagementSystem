@@ -15,6 +15,11 @@ namespace Infrastructure.Data
             modelBuilder.Entity<Warehouse>(entity => {
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             });
+            modelBuilder.Entity<Inventory>()
+                .HasOne(i => i.Warehouse)
+                .WithMany(w => w.Inventories)
+                .HasForeignKey(i => i.WarehouseId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
