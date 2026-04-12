@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Application.DTOs.Requests;
+using Application.DTOs.Responses;
+using SharedLibrary.Responses;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Application.DTOs.Requests;
-using SharedLibrary.Responses;
 
 namespace Application.Services.Interfaces
 {
@@ -17,5 +18,7 @@ namespace Application.Services.Interfaces
         Task<ApiResponse<string>> ResendOtpResetAsync(string accountId);
         Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequest request);
         Task<ApiResponse<string>> VerifyResetOtpAsync(OtpVerifyRequest request);
+        Task<ApiResponse<SignInResponse>> SignInAsync(SignInRequest request);
+        Task<ApiResponse<string>> SignOutAsync(string refreshToken);
     }
 }
