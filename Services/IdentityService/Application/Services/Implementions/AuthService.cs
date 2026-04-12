@@ -1,4 +1,5 @@
 ﻿using Application.DTOs.Requests;
+using Application.DTOs.Responses;
 using Application.Helpers;
 using Application.Services.Interfaces;
 using Domain.Entities;
@@ -16,12 +17,14 @@ namespace Application.Services.Implementions
     public class AuthService : IAuthService
     {
         private readonly IEmailService _emailService;
+        private readonly JwtGenerator _jwtGenerator;
         private readonly IAuthUow _authUow;
 
-        public AuthService(IEmailService emailService, IAuthUow authUow)
+        public AuthService(IEmailService emailService, IAuthUow authUow, JwtGenerator jwtGenerator)
         {
             _emailService = emailService;
             _authUow = authUow;
+            _jwtGenerator = jwtGenerator;
         }
 
         public async Task<ApiResponse<string>> SignUpAsync(SignUpRequest request)
@@ -365,5 +368,78 @@ namespace Application.Services.Implementions
             }
         }
 
+        public async Task<ApiResponse<SignInResponse>> SignInAsync(SignInRequest request)
+        {
+            if (request == null)
+            {
+                return ApiResponse<SignInResponse>.Failure("Please enter Email and Password", 400);
+            }
+
+            var account = await _authUow.Accounts.GetByEmailAsync(request.Email);
+            if (account == null)
+            {
+                return ApiResponse<SignInResponse>.Failure("No account be created by this email, please try another email or sign up", 404);
+            }
+
+            bool valid = BCrypt.Net.BCrypt.Verify(request.Password, account.Password);
+            if (!valid)
+            {
+                return ApiResponse<SignInResponse>.Failure("Incorrect password, please try again", 401);
+            }
+
+            var refreshToken = AuthHelpers.CreateRefreshToken(account.Id);
+
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.RefreshTokens.Create(refreshToken);
+                await _authUow.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<SignInResponse>.Failure($"Database error: {ex.Message}", 500);
+            }
+
+            var accessToken = _jwtGenerator.GenerateToken(account);
+
+            var response = new SignInResponse
+            {
+                AccountId = account.Id,
+                RefreshToken = refreshToken.Token,
+                AccessToken = accessToken
+            };
+
+            return ApiResponse<SignInResponse>.Success(response, "Sign in successful.", 200);
+        }
+
+        public async Task<ApiResponse<string>> SignOutAsync(string refreshToken)
+        {
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return ApiResponse<string>.Failure("Refresh token is required.", 400);
+            }
+
+            var token = await _authUow.RefreshTokens.GetByTokenAsync(refreshToken);
+            if (token == null)
+            {
+                return ApiResponse<string>.Failure("Invalid refresh token.", 404);
+            }
+
+            token.IsActive = false;
+            token.RevokedAt = DateTime.UtcNow;
+            try
+            {
+                await _authUow.BeginTransactionAsync();
+                _authUow.RefreshTokens.Update(token);
+                await _authUow.CommitAsync();
+                return ApiResponse<string>.Success(token.AccountId, "Sign out successful.", 200);
+            }
+            catch (Exception ex)
+            {
+                await _authUow.RollbackAsync();
+                return ApiResponse<string>.Failure($"Database error: {ex.Message}", 500);
+            }
+        }
     }
 }
