@@ -11,5 +11,6 @@ namespace Application.Interfaces
         Task<ApiResponse<WarehouseDTO>> UpdateWarehouseAsync(string id, UpdateWarehouseDTO warehouseDto);
         Task<ApiResponse<bool>> DeleteWarehouseAsync(string id);
         Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto);
+        Task<ApiResponse<bool>> StockOutAsync(string warehouseId, StockOutDTO stockOutDto);
     }
 }

@@ -107,11 +107,43 @@ namespace Application.Services
 
             existingWarehouse.Inventories.Add(newInventory);
             var saved = await _warehouseRepository.SaveChangeAsync();
-            if(!saved)
+            if (!saved)
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
             }
             return ApiResponse<bool>.Success(true, "Nhập hàng vào kho thành công.");
+        }
+
+        public async Task<ApiResponse<bool>> StockOutAsync(string warehouseId, StockOutDTO stockOutDto)
+        {
+            var existingWarehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(warehouseId);
+            if (existingWarehouse == null)
+            {
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}");
+            }
+            var inventoryItem = existingWarehouse.Inventories.FirstOrDefault(i => i.ProductId == stockOutDto.ProductId);
+            // Kiểm tra tồn tại sản phẩm trong kho
+            if (inventoryItem == null)
+                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {stockOutDto.ProductId} trong kho hàng.");
+            // Kiểm tra đủ số lượng để xuất
+            if (inventoryItem.Quantity < stockOutDto.Quantity)
+            {
+                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ còn lại {inventoryItem.Quantity} sản phẩm.");
+            }
+            // Thực hiện xuất hàng
+            inventoryItem.Quantity -= stockOutDto.Quantity;
+            inventoryItem.UpdatedAt = DateTime.UtcNow;
+            // Nếu số lượng sau khi xuất hàng bằng 0, ta sẽ xóa luôn mục tồn kho đó để tránh lưu trữ những mục không còn giá trị
+            if (inventoryItem.Quantity == 0)
+            {
+                existingWarehouse.Inventories.Remove(inventoryItem);
+            }
+            var saved = await _warehouseRepository.SaveChangeAsync();
+            if (!saved)
+            {
+                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.");
+            }
+            return ApiResponse<bool>.Success(true, "Xuất hàng từ kho thành công.");
         }
     }
 }

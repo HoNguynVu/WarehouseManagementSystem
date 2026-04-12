@@ -19,12 +19,10 @@ namespace API.Controllers
         public async Task<IActionResult> Create(CreateWarehouseDTO dto)
         {
             var response = await _warehouseService.CreateWarehouseAsync(dto);
-
             if (!response.IsSuccess)
             {
                 return BadRequest(response);
             }
-
             return Ok(response);
         }
 
@@ -43,12 +41,10 @@ namespace API.Controllers
         public async Task<IActionResult> GetById(string id)
         {
             var response = await _warehouseService.GetWarehouseByIdAsync(id);
-
             if (!response.IsSuccess)
             {
                 return NotFound(response);
             }
-
             return Ok(response);
         }
 
@@ -78,12 +74,22 @@ namespace API.Controllers
         public async Task<IActionResult> AddInventory(string warehouseId, [FromBody] AddInventoryDTO dto)
         {
             var response = await _warehouseService.AddInventoryToWarehouseAsync(warehouseId, dto);
-
             if (!response.IsSuccess)
             {
                 return BadRequest(response); 
             }
+            return Ok(response);
+        }
 
+        [HttpPost("{warehouseId}/stock-out")]
+        public async Task<IActionResult> StockOut(string warehouseId, [FromBody] StockOutDTO dto)
+        {
+            var response = await _warehouseService.StockOutAsync(warehouseId, dto);
+
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response);
+            }
             return Ok(response);
         }
     }
