@@ -76,7 +76,7 @@ namespace API.Controllers
             var response = await _warehouseService.AddInventoryToWarehouseAsync(warehouseId, dto);
             if (!response.IsSuccess)
             {
-                return BadRequest(response); 
+                return BadRequest(response);
             }
             return Ok(response);
         }
@@ -91,6 +91,18 @@ namespace API.Controllers
                 return BadRequest(response);
             }
             return Ok(response);
+        }
+
+        [HttpPost("{warehouseId}/transfer")]
+        public async Task<IActionResult> TransferInventory(string warehouseId, [FromBody] TransferInventoryDTO dto)
+        {
+            var response = await _warehouseService.TransferInventoryAsync(warehouseId, dto);
+            if (!response.IsSuccess)
+            {
+                return BadRequest(response);
+            }
+            return Ok(response);
+
         }
     }
 }

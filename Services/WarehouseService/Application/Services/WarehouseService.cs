@@ -4,48 +4,49 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
+using Application.Helpers;
 
 namespace Application.Services
 {
     public class WarehouseService : IWarehouseService
     {
-        private readonly IWarehouseRepository _warehouseRepository;
+        private readonly IWarehouseUow _warehouseUow;
         private readonly IMapper _mapper;
-        public WarehouseService(IWarehouseRepository warehouseRepository, IMapper mapper)
+        public WarehouseService(IWarehouseUow warehouseUow, IMapper mapper)
         {
-            _warehouseRepository = warehouseRepository;
+            _warehouseUow = warehouseUow;
             _mapper = mapper;
         }
 
-        public async Task<ApiResponse<Domain.Entities.Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto)
+        public async Task<ApiResponse<Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto)
         {
-            var warehouse = _mapper.Map<Domain.Entities.Warehouse>(warehouseDto);
-
-            warehouse.Id = Guid.NewGuid().ToString();
+            var warehouse = _mapper.Map<Warehouse>(warehouseDto);
+            
+            warehouse.Id = IdGenerator.GenerateId(ClassPrefix.Warehouse);
             warehouse.CreatedAt = DateTime.UtcNow;
 
-            await _warehouseRepository.AddAsync(warehouse);
-            var saved = await _warehouseRepository.SaveChangeAsync();
+            await _warehouseUow.Warehouse.AddAsync(warehouse);
+            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!saved)
             {
-                return ApiResponse<Domain.Entities.Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.");
+                return ApiResponse<Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.", 500);
             }
-            return ApiResponse<Domain.Entities.Warehouse>.Success(warehouse, "Tạo kho hàng thành công.");
+            return ApiResponse<Warehouse>.Success(warehouse, "Tạo kho hàng thành công.", 201);
         }
 
         public async Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync()
         {
-            var warehouses = await _warehouseRepository.GetAllAsync();
+            var warehouses = await _warehouseUow.Warehouse.GetAllAsync();
             var dtos = _mapper.Map<IEnumerable<WarehouseDTO>>(warehouses);
             return ApiResponse<IEnumerable<WarehouseDTO>>.Success(dtos, "Lấy danh sách kho hàng thành công.");
         }
 
         public async Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id)
         {
-            var warehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(id);
+            var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(id);
             if (warehouse == null)
             {
-                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}");
+                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}", 404);
             }
             var dto = _mapper.Map<WarehouseDTO>(warehouse);
             return ApiResponse<WarehouseDTO>.Success(dto, "Lấy thông tin kho hàng thành công.");
@@ -53,18 +54,18 @@ namespace Application.Services
 
         public async Task<ApiResponse<WarehouseDTO>> UpdateWarehouseAsync(string id, UpdateWarehouseDTO warehouseDto)
         {
-            var existingWarehouse = await _warehouseRepository.GetByIdAsync(id);
+            var existingWarehouse = await _warehouseUow.Warehouse.GetByIdAsync(id);
             if (existingWarehouse == null)
             {
-                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}");
+                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}", 404);
             }
             _mapper.Map(warehouseDto, existingWarehouse);
             existingWarehouse.UpdatedAt = DateTime.UtcNow;
-            _warehouseRepository.Update(existingWarehouse);
-            var updated = await _warehouseRepository.SaveChangeAsync();
+            _warehouseUow.Warehouse.Update(existingWarehouse);
+            var updated = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!updated)
             {
-                return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.");
+                return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.", 500);
             }
             var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
             return ApiResponse<WarehouseDTO>.Success(dto, "Cập nhật kho hàng thành công.");
@@ -72,41 +73,41 @@ namespace Application.Services
 
         public async Task<ApiResponse<bool>> DeleteWarehouseAsync(string id)
         {
-            var existingWarehouse = await _warehouseRepository.GetByIdAsync(id);
+            var existingWarehouse = await _warehouseUow.Warehouse.GetByIdAsync(id);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {id}");
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {id}", 404);
             }
-            _warehouseRepository.Delete(existingWarehouse);
-            var deleted = await _warehouseRepository.SaveChangeAsync();
+            _warehouseUow.Warehouse.Delete(existingWarehouse);
+            var deleted = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!deleted)
             {
-                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.");
+                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.", 500);
             }
             return ApiResponse<bool>.Success(true, "Xóa kho hàng thành công.");
         }
         public async Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto)
         {
-            var existingWarehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(warehouseId);
+            var existingWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}");
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}", 404);
             }
             var currentUsedCapacity = existingWarehouse.Inventories.Sum(i => i.Quantity);
 
             if (currentUsedCapacity + inventoryDto.Quantity > existingWarehouse.Capacity)
             {
                 var remaining = existingWarehouse.Capacity - currentUsedCapacity;
-                return ApiResponse<bool>.Failure($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}");
+                return ApiResponse<bool>.Failure($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}", 400);
             }
 
             var newInventory = _mapper.Map<Inventory>(inventoryDto);
-            newInventory.Id = Guid.NewGuid().ToString();
+            newInventory.Id = IdGenerator.GenerateId(ClassPrefix.Inventory);
             newInventory.CreatedAt = DateTime.UtcNow;
             newInventory.WarehouseId = warehouseId;
 
             existingWarehouse.Inventories.Add(newInventory);
-            var saved = await _warehouseRepository.SaveChangeAsync();
+            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!saved)
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
@@ -116,19 +117,19 @@ namespace Application.Services
 
         public async Task<ApiResponse<bool>> StockOutAsync(string warehouseId, StockOutDTO stockOutDto)
         {
-            var existingWarehouse = await _warehouseRepository.GetWarehouseWithInventoriesAsync(warehouseId);
+            var existingWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}");
+                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {warehouseId}", 404);
             }
             var inventoryItem = existingWarehouse.Inventories.FirstOrDefault(i => i.ProductId == stockOutDto.ProductId);
             // Kiểm tra tồn tại sản phẩm trong kho
             if (inventoryItem == null)
-                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {stockOutDto.ProductId} trong kho hàng.");
+                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {stockOutDto.ProductId} trong kho hàng.", 404);
             // Kiểm tra đủ số lượng để xuất
             if (inventoryItem.Quantity < stockOutDto.Quantity)
             {
-                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ còn lại {inventoryItem.Quantity} sản phẩm.");
+                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ còn lại {inventoryItem.Quantity} sản phẩm.", 400);
             }
             // Thực hiện xuất hàng
             inventoryItem.Quantity -= stockOutDto.Quantity;
@@ -138,12 +139,77 @@ namespace Application.Services
             {
                 existingWarehouse.Inventories.Remove(inventoryItem);
             }
-            var saved = await _warehouseRepository.SaveChangeAsync();
+            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!saved)
             {
-                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.");
+                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.", 500);
             }
             return ApiResponse<bool>.Success(true, "Xuất hàng từ kho thành công.");
+        }
+
+        public async Task<ApiResponse<bool>> TransferInventoryAsync(string fromWarehouseId, TransferInventoryDTO dto)
+        {
+            if (fromWarehouseId == dto.ToWarehouseId)
+                return ApiResponse<bool>.Failure("Kho nguồn và kho đích không được trùng nhau.", 400);
+
+            await _warehouseUow.BeginTransactionAsync();
+
+            try
+            {
+                var fromWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(fromWarehouseId);
+                if (fromWarehouse == null)
+                    throw new Exception("Không tìm thấy kho nguồn.");
+
+                var inventoryItemA = fromWarehouse.Inventories.FirstOrDefault(i => i.ProductId == dto.ProductId);
+                if (inventoryItemA == null || inventoryItemA.Quantity < dto.Quantity)
+                    throw new Exception("Kho nguồn không có sản phẩm này hoặc không đủ số lượng để chuyển.");
+
+                var toWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(dto.ToWarehouseId);
+                if (toWarehouse == null)
+                    throw new Exception("Không tìm thấy kho đích.");
+
+                var currentUsedCapacityB = toWarehouse.Inventories.Sum(i => i.Quantity);
+                if (currentUsedCapacityB + dto.Quantity > toWarehouse.Capacity)
+                {
+                    var remaining = toWarehouse.Capacity - currentUsedCapacityB;
+                    throw new Exception($"Kho đích không đủ sức chứa! Chỉ còn trống: {remaining}");
+                }
+
+                inventoryItemA.Quantity -= dto.Quantity;
+                if (inventoryItemA.Quantity == 0)
+                {
+                    fromWarehouse.Inventories.Remove(inventoryItemA); 
+                }
+
+                var inventoryItemB = toWarehouse.Inventories.FirstOrDefault(i => i.ProductId == dto.ProductId);
+                if (inventoryItemB != null)
+                {
+                    inventoryItemB.Quantity += dto.Quantity;
+                }
+                else
+                {
+
+                    var newInventory = new Inventory
+                    {
+                        Id = IdGenerator.GenerateId(ClassPrefix.Inventory),
+                        ProductId = dto.ProductId,
+                        ProductName = inventoryItemA.ProductName, 
+                        Quantity = dto.Quantity,
+                        WarehouseId = dto.ToWarehouseId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    toWarehouse.Inventories.Add(newInventory);
+                }
+
+                await _warehouseUow.CommitAsync();
+
+                return ApiResponse<bool>.Success(true, "Chuyển kho thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _warehouseUow.RollbackAsync();
+                return ApiResponse<bool>.Failure(ex.Message);
+            }
         }
     }
 }

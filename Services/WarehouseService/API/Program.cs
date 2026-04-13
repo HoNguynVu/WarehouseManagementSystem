@@ -1,5 +1,4 @@
 using Application.Interfaces;
-using Application.Mappings;
 using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Data;
@@ -24,7 +23,7 @@ builder.Services.AddControllers()
                 .ToList();
 
             // Đóng gói vào chuẩn ApiResponse của Vinh
-            var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", errors);
+            var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
 
             return new BadRequestObjectResult(response);
         };
@@ -43,6 +42,7 @@ builder.Services.AddAutoMapper(config =>
 
 builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
 
 var app = builder.Build();
 
