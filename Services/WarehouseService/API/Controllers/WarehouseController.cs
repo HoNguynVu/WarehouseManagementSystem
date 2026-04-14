@@ -21,7 +21,7 @@ namespace API.Controllers
             var response = await _warehouseService.CreateWarehouseAsync(dto);
             if (!response.IsSuccess)
             {
-                return BadRequest(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -32,7 +32,7 @@ namespace API.Controllers
             var response = await _warehouseService.GetAllWarehousesAsync();
             if (!response.IsSuccess)
             {
-                return NotFound(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -43,7 +43,7 @@ namespace API.Controllers
             var response = await _warehouseService.GetWarehouseByIdAsync(id);
             if (!response.IsSuccess)
             {
-                return NotFound(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -54,7 +54,7 @@ namespace API.Controllers
             var response = await _warehouseService.UpdateWarehouseAsync(id, dto);
             if (!response.IsSuccess)
             {
-                return NotFound(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -65,7 +65,7 @@ namespace API.Controllers
             var response = await _warehouseService.DeleteWarehouseAsync(id);
             if (!response.IsSuccess)
             {
-                return NotFound(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -76,19 +76,19 @@ namespace API.Controllers
             var response = await _warehouseService.AddInventoryToWarehouseAsync(warehouseId, dto);
             if (!response.IsSuccess)
             {
-                return BadRequest(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
 
         [HttpPost("{warehouseId}/stock-out")]
-        public async Task<IActionResult> StockOut(string warehouseId, [FromBody] StockOutDTO dto)
+        public async Task<IActionResult> DirectStockOut(string warehouseId, [FromBody] DirectStockOutDTO dto)
         {
-            var response = await _warehouseService.StockOutAsync(warehouseId, dto);
+            var response = await _warehouseService.DirectStockOutAsync(warehouseId, dto);
 
             if (!response.IsSuccess)
             {
-                return BadRequest(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
         }
@@ -99,10 +99,43 @@ namespace API.Controllers
             var response = await _warehouseService.TransferInventoryAsync(warehouseId, dto);
             if (!response.IsSuccess)
             {
-                return BadRequest(response);
+                return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
 
+        }
+
+        [HttpPost("{warehouseId}/reserve")]
+        public async Task<IActionResult> ReserveStock(string warehouseId, [FromBody] ReserveStockDTO dto)
+        {
+            var response = await _warehouseService.ReserveStockAsync(warehouseId, dto);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost("{warehouseId}/release")]
+        public async Task<IActionResult> ReleaseStock(string warehouseId, [FromBody] ReleaseStockDTO dto)
+        {
+            var response = await _warehouseService.ReleaseReservedStockAsync(warehouseId, dto);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost("{warehouseId}/confirm-out")]
+        public async Task<IActionResult> ConfirmStockOut(string warehouseId, [FromBody] ConfirmStockOutDTO dto)
+        {
+            var response = await _warehouseService.ConfirmStockOutAsync(warehouseId, dto);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
         }
     }
 }

@@ -115,7 +115,7 @@ namespace Application.Services
             return ApiResponse<bool>.Success(true, "Nhập hàng vào kho thành công.");
         }
 
-        public async Task<ApiResponse<bool>> StockOutAsync(string warehouseId, StockOutDTO stockOutDto)
+        public async Task<ApiResponse<bool>> DirectStockOutAsync(string warehouseId, DirectStockOutDTO stockOutDto)
         {
             var existingWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
             if (existingWarehouse == null)
@@ -126,10 +126,14 @@ namespace Application.Services
             // Kiểm tra tồn tại sản phẩm trong kho
             if (inventoryItem == null)
                 return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {stockOutDto.ProductId} trong kho hàng.", 404);
+
+            // Tính toán số lượng hàng khả dụng
+            int availableQuantity = inventoryItem.Quantity - inventoryItem.ReservedQuantity;
+
             // Kiểm tra đủ số lượng để xuất
-            if (inventoryItem.Quantity < stockOutDto.Quantity)
+            if (availableQuantity < stockOutDto.Quantity)
             {
-                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ còn lại {inventoryItem.Quantity} sản phẩm.", 400);
+                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ có thể xuất tối đa {availableQuantity} sản phẩm.", 400);
             }
             // Thực hiện xuất hàng
             inventoryItem.Quantity -= stockOutDto.Quantity;
@@ -209,6 +213,101 @@ namespace Application.Services
             {
                 await _warehouseUow.RollbackAsync();
                 return ApiResponse<bool>.Failure(ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ReserveStockAsync(string warehouseId, ReserveStockDTO reserveStockDto)
+        {
+            await _warehouseUow.BeginTransactionAsync();
+            try
+            {
+                var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
+                if (warehouse == null) throw new Exception("Không tìm thấy kho hàng.");
+
+                var inventoryItem = warehouse.Inventories.FirstOrDefault(i => i.ProductId == reserveStockDto.ProductId);
+                if (inventoryItem == null) throw new Exception("Không tìm thấy sản phẩm trong kho hàng.");
+
+                //Tính số lượng còn CÓ THỂ BÁN
+                int availableQuantity = inventoryItem.Quantity - inventoryItem.ReservedQuantity;
+                if (availableQuantity < reserveStockDto.Quantity)
+                {
+                    throw new Exception($"Không đủ hàng khả dụng! Tổng: {inventoryItem.Quantity}, Đang giữ: {inventoryItem.ReservedQuantity}, Có thể bán: {availableQuantity}");
+                }
+
+                // Khóa số lượng hàng lại
+                inventoryItem.ReservedQuantity += reserveStockDto.Quantity;
+
+                await _warehouseUow.CommitAsync();
+                return ApiResponse<bool>.Success(true, "Giữ hàng thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _warehouseUow.RollbackAsync();
+                return ApiResponse<bool>.Failure(ex.Message, 400);
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ReleaseReservedStockAsync(string warehouseId, ReleaseStockDTO releaseStockDto)
+        {
+            await _warehouseUow.BeginTransactionAsync();
+            try
+            {
+                var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
+                if (warehouse == null) throw new Exception("Không tìm thấy kho hàng.");
+
+                var inventoryItem = warehouse.Inventories.FirstOrDefault(i => i.ProductId == releaseStockDto.ProductId);
+                if (inventoryItem == null) throw new Exception("Không tìm thấy sản phẩm trong kho hàng.");
+
+                if (inventoryItem.ReservedQuantity < releaseStockDto.Quantity)
+                {
+                    throw new Exception($"Số lượng cần giải phóng vượt quá số lượng đang giữ! Đang giữ: {inventoryItem.ReservedQuantity}, Cần giải phóng: {releaseStockDto.Quantity}");
+                }
+
+                //Trả lại số lượng đang giữ
+                inventoryItem.ReservedQuantity -= releaseStockDto.Quantity;
+
+                await _warehouseUow.CommitAsync();
+                return ApiResponse<bool>.Success(true, "Giải phóng hàng đã giữ thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _warehouseUow.RollbackAsync();
+                return ApiResponse<bool>.Failure(ex.Message, 400);
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ConfirmStockOutAsync(string warehouseId, ConfirmStockOutDTO confirmStockOutDto)
+        {
+            await _warehouseUow.BeginTransactionAsync();
+            try
+            {
+                var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
+                if (warehouse == null) throw new Exception("Không tìm thấy kho hàng.");
+
+                var inventoryItem = warehouse.Inventories.FirstOrDefault(i => i.ProductId == confirmStockOutDto.ProductId);
+                if (inventoryItem == null) throw new Exception("Không tìm thấy sản phẩm trong kho hàng.");
+
+                if (inventoryItem.ReservedQuantity < confirmStockOutDto.Quantity)
+                {
+                    throw new Exception($"Số lượng cần xuất vượt quá số lượng đang giữ! Đang giữ: {inventoryItem.ReservedQuantity}, Cần xuất: {confirmStockOutDto.Quantity}");
+                }
+
+                // Thực hiện xuất hàng (Khách đã lấy hàng)
+                inventoryItem.Quantity -= confirmStockOutDto.Quantity;
+                inventoryItem.ReservedQuantity -= confirmStockOutDto.Quantity;
+
+                if(inventoryItem.Quantity == 0)
+                {
+                    warehouse.Inventories.Remove(inventoryItem);
+                }
+
+                await _warehouseUow.CommitAsync();
+                return ApiResponse<bool>.Success(true, "Xác nhận xuất hàng thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _warehouseUow.RollbackAsync();
+                return ApiResponse<bool>.Failure(ex.Message, 400);
             }
         }
     }
