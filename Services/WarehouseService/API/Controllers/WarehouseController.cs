@@ -2,20 +2,35 @@
 using Application.Interfaces;
 using Infrastructure.Data;
 using Application.DTOs;
+using MassTransit;
+using Application.Events;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class WarehouseController : ControllerBase
     {
         private readonly IWarehouseService _warehouseService;
-        public WarehouseController(IWarehouseService warehouseService)
+        private readonly IPublishEndpoint _publishEndpoint;
+        public WarehouseController(IWarehouseService warehouseService, IPublishEndpoint publishEndpoint)
         {
             _warehouseService = warehouseService;
+            _publishEndpoint = publishEndpoint;
+        }
+
+        [HttpPost("test-fake-order")]
+        public async Task<IActionResult> FakeOrder([FromBody] OrderAllocatedEvent fakeOrder)
+        {
+            // Vứt bức thư lên RabbitMQ
+            await _publishEndpoint.Publish(fakeOrder);
+            return Ok("Đã ném sự kiện Đặt hàng lên RabbitMQ! Hãy check cửa sổ Console (Terminal) xem Consumer có bắt được không nhé!");
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(CreateWarehouseDTO dto)
         {
             var response = await _warehouseService.CreateWarehouseAsync(dto);
@@ -27,6 +42,7 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var response = await _warehouseService.GetAllWarehousesAsync();
@@ -82,6 +98,7 @@ namespace API.Controllers
         }
 
         [HttpPost("{warehouseId}/stock-out")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DirectStockOut(string warehouseId, [FromBody] DirectStockOutDTO dto)
         {
             var response = await _warehouseService.DirectStockOutAsync(warehouseId, dto);
@@ -137,5 +154,6 @@ namespace API.Controllers
             }
             return Ok(response);
         }
+
     }
 }
