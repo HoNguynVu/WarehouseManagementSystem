@@ -23,8 +23,8 @@ services:
     image: postgres:15-alpine
     container_name: wms-postgres
     environment:
-      POSTGRES_USER: admin           
-      POSTGRES_PASSWORD: 123        
+      POSTGRES_USER: ${DB_POSTGRES_USER}         
+      POSTGRES_PASSWORD: ${DB_POSTGRES_PASS}
       POSTGRES_DB: warehouse_db      
     ports:
       - "5433:5432"
