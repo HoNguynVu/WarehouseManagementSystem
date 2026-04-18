@@ -1,0 +1,14 @@
+﻿using SharedLibrary.Seedwork;
+
+namespace Domain.Entities
+{
+    public class Inventory : BaseEntity<string>
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string WarehouseId { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public int ReservedQuantity { get; set; } = 0;
+        public virtual Warehouse Warehouse { get; set; }
+    }
+}
