@@ -66,12 +66,26 @@ namespace Application.Services
 
         public async Task<ApiResponse<WarehouseDTO>> GetWarehouseByIdAsync(string id)
         {
+            string cacheKey = $"warehouse_{id}";
+
+            var cacheData = await _cache.GetStringAsync(cacheKey);
+            if(!string.IsNullOrEmpty(cacheData))
+            {
+                var dtoFromCache = JsonSerializer.Deserialize<WarehouseDTO>(cacheData);
+                return ApiResponse<WarehouseDTO>.Success(dtoFromCache, "Lấy thông tin kho hàng thành công (từ cache).");
+            }
+
             var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(id);
             if (warehouse == null)
             {
                 return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {id}", 404);
             }
             var dto = _mapper.Map<WarehouseDTO>(warehouse);
+
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) // Cho phép cache tồn tại trong 10 phút
+            };
             return ApiResponse<WarehouseDTO>.Success(dto, "Lấy thông tin kho hàng thành công.");
         }
 
@@ -109,6 +123,7 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.", 500);
             }
+            await _cache.RemoveAsync("all_warehouses");
             return ApiResponse<bool>.Success(true, "Xóa kho hàng thành công.");
         }
         public async Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto)
@@ -137,6 +152,7 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
             }
+            await _cache.RemoveAsync("all_warehouses");
             return ApiResponse<bool>.Success(true, "Nhập hàng vào kho thành công.");
         }
 
@@ -173,6 +189,7 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.", 500);
             }
+            await _cache.RemoveAsync("all_warehouses");
             return ApiResponse<bool>.Success(true, "Xuất hàng từ kho thành công.");
         }
 
@@ -231,7 +248,7 @@ namespace Application.Services
                 }
 
                 await _warehouseUow.CommitAsync();
-
+                await _cache.RemoveAsync("all_warehouses");
                 return ApiResponse<bool>.Success(true, "Chuyển kho thành công!");
             }
             catch (Exception ex)
@@ -263,6 +280,7 @@ namespace Application.Services
                 inventoryItem.ReservedQuantity += reserveStockDto.Quantity;
 
                 await _warehouseUow.CommitAsync();
+                await _cache.RemoveAsync("all_warehouses");
                 return ApiResponse<bool>.Success(true, "Giữ hàng thành công!");
             }
             catch (Exception ex)
@@ -292,6 +310,7 @@ namespace Application.Services
                 inventoryItem.ReservedQuantity -= releaseStockDto.Quantity;
 
                 await _warehouseUow.CommitAsync();
+                await _cache.RemoveAsync("all_warehouses");
                 return ApiResponse<bool>.Success(true, "Giải phóng hàng đã giữ thành công!");
             }
             catch (Exception ex)
@@ -327,6 +346,7 @@ namespace Application.Services
                 }
 
                 await _warehouseUow.CommitAsync();
+                await _cache.RemoveAsync("all_warehouses");
                 return ApiResponse<bool>.Success(true, "Xác nhận xuất hàng thành công!");
             }
             catch (Exception ex)
