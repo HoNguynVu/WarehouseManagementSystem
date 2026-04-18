@@ -2,6 +2,7 @@
 using Application.DTOs.Responses;
 using Application.Helpers;
 using Application.Services.Interfaces;
+using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
 using Infracstructure.UnitOfWorks;
@@ -19,12 +20,14 @@ namespace Application.Services.Implementions
         private readonly IEmailService _emailService;
         private readonly JwtGenerator _jwtGenerator;
         private readonly IAuthUow _authUow;
+        private readonly IMapper _mapper;
 
-        public AuthService(IEmailService emailService, IAuthUow authUow, JwtGenerator jwtGenerator)
+        public AuthService(IEmailService emailService, IAuthUow authUow, JwtGenerator jwtGenerator, IMapper mapper)
         {
             _emailService = emailService;
             _authUow = authUow;
             _jwtGenerator = jwtGenerator;
+            _mapper = mapper;
         }
 
         public async Task<ApiResponse<string>> SignUpAsync(SignUpRequest request)
@@ -70,17 +73,9 @@ namespace Application.Services.Implementions
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            var new_account = new Accounts
-            {
-                Id = IdGenerator.GenerateId(),
-                Username = request.Username,
-                Email = request.Email,
-                Password = passwordHash,
-                Phone = request.Phone,
-                Role = AccountRoles.User,
-                Status = AccountStatus.EmailUnverified,
-                CreatedAt = DateTime.UtcNow
-            };
+            var new_account = _mapper.Map<Accounts>(request);
+            new_account.Id = IdGenerator.GenerateId();
+            new_account.Password = passwordHash;
 
             var otp_code = new Otps
             {
@@ -102,7 +97,9 @@ namespace Application.Services.Implementions
             catch (Exception ex)
             {
                 await _authUow.RollbackAsync();
-                return ApiResponse<string>.Failure($"Database error: {ex.Message}");
+                var actualError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+
+                return ApiResponse<string>.Failure($"Database error: {actualError}", 500);
             }
 
             try
@@ -111,7 +108,9 @@ namespace Application.Services.Implementions
             }
             catch (Exception ex)
             {
-                return ApiResponse<string>.Success(new_account.Id, "Account created, but failed to send verification email. Please request a new OTP.", 201);
+                var actualError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                //return ApiResponse<string>.Success(new_account.Id, "Account created, but failed to send verification email. Please request a new OTP.", 201);
+                return ApiResponse<string>.Success(new_account.Id, actualError, 201);
             }
 
             return ApiResponse<string>.Success(new_account.Id, "Account created successfully. Please check your email.", 201);
