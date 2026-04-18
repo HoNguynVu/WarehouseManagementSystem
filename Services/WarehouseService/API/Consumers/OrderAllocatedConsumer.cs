@@ -2,20 +2,23 @@
 using Application.Interfaces;
 using Application.DTOs;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
 namespace API.Consumers
 {
     public class OrderAllocatedConsumer : IConsumer<OrderAllocatedEvent>
     {
         private readonly IWarehouseService _warehouseService;
-        public OrderAllocatedConsumer(IWarehouseService warehouseService)
+        private readonly ILogger<OrderAllocatedConsumer> _logger;
+        public OrderAllocatedConsumer(IWarehouseService warehouseService, ILogger<OrderAllocatedConsumer> logger)
         {
             _warehouseService = warehouseService;
+            _logger = logger;
         }
         public async Task Consume(ConsumeContext<OrderAllocatedEvent> context)
         {
             var message = context.Message;
-            Console.WriteLine($"[x] Bưu điện vừa nhận được Đơn hàng {message.OrderId} cần giữ {message.Quantity} sản phẩm {message.ProductId}");
+            _logger.LogInformation("[RabbitMQ] Nhận yêu cầu giữ hàng cho Đơn {OrderId}", message.OrderId);
 
             // Tạo DTO gọi hàm Reserve
             var dto = new ReserveStockDTO
@@ -27,9 +30,9 @@ namespace API.Consumers
             var result = await _warehouseService.ReserveStockAsync(message.WarehouseId, dto);
 
             if (result.IsSuccess)
-                Console.WriteLine($"[V] Đã giữ hàng thành công cho đơn {message.OrderId}!");
+                _logger.LogInformation("[RabbitMQ] Giữ hàng thành công cho Đơn {OrderId}", message.OrderId);
             else
-                Console.WriteLine($"[X] Giữ hàng thất bại: {result.Message}");
+                _logger.LogError("[RabbitMQ] Lỗi khi giữ hàng Đơn {OrderId}: {Error}", message.OrderId, result.Message);
         }
     }
 }

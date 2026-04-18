@@ -5,6 +5,9 @@ using Domain.Entities;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
 using Application.Helpers;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
+
 
 namespace Application.Services
 {
@@ -12,10 +15,12 @@ namespace Application.Services
     {
         private readonly IWarehouseUow _warehouseUow;
         private readonly IMapper _mapper;
-        public WarehouseService(IWarehouseUow warehouseUow, IMapper mapper)
+        private readonly IDistributedCache _cache;
+        public WarehouseService(IWarehouseUow warehouseUow, IMapper mapper, IDistributedCache cache)
         {
             _warehouseUow = warehouseUow;
             _mapper = mapper;
+            _cache = cache;
         }
 
         public async Task<ApiResponse<Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto)
@@ -31,13 +36,31 @@ namespace Application.Services
             {
                 return ApiResponse<Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.", 500);
             }
+            await _cache.RemoveAsync("all_warehouses");
             return ApiResponse<Warehouse>.Success(warehouse, "Tạo kho hàng thành công.", 201);
         }
 
         public async Task<ApiResponse<IEnumerable<WarehouseDTO>>> GetAllWarehousesAsync()
         {
+            string cacheKey = "all_warehouses";
+
+            var cacheData = await _cache.GetStringAsync(cacheKey);
+            if(!string.IsNullOrEmpty(cacheData))
+            {
+                var dtosFromCache = JsonSerializer.Deserialize<IEnumerable<WarehouseDTO>>(cacheData);
+                return ApiResponse<IEnumerable<WarehouseDTO>>.Success(dtosFromCache, "Lấy danh sách kho hàng thành công (từ cache).");
+            }
+
             var warehouses = await _warehouseUow.Warehouse.GetAllAsync();
             var dtos = _mapper.Map<IEnumerable<WarehouseDTO>>(warehouses);
+
+            var cacheOptions = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) // Cho phép cache tồn tại trong 10 phút
+            };
+
+            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dtos), cacheOptions);
+
             return ApiResponse<IEnumerable<WarehouseDTO>>.Success(dtos, "Lấy danh sách kho hàng thành công.");
         }
 
@@ -68,6 +91,8 @@ namespace Application.Services
                 return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.", 500);
             }
             var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
+
+            await _cache.RemoveAsync("all_warehouses");
             return ApiResponse<WarehouseDTO>.Success(dto, "Cập nhật kho hàng thành công.");
         }
 

@@ -12,129 +12,156 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
-var builder = WebApplication.CreateBuilder(args);
+using Serilog;
 
-// Add services to the container.
+//Add Serilog configuration
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console() // Ghi ra màn hình Console
+    .WriteTo.File("Logs/warehouse-log-.txt", rollingInterval: RollingInterval.Day) // Mỗi ngày tạo 1 file log riêng
+    .CreateLogger();
 
-builder.Services.AddControllers()
-    .ConfigureApiBehaviorOptions(options =>
-    {
-        options.InvalidModelStateResponseFactory = context =>
-        {
-            // Lấy danh sách các lỗi validation
-            var errors = context.ModelState.Values
-                .SelectMany(v => v.Errors)
-                .Select(e => e.ErrorMessage)
-                .ToList();
-
-            // Đóng gói vào chuẩn ApiResponse của Vinh
-            var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
-
-            return new BadRequestObjectResult(response);
-        };
-    });
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen( c =>
+try
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Warehouse API", Version = "v1" });
+    Log.Information("Starting Warehouse Service API...");
+    var builder = WebApplication.CreateBuilder(args);
 
-    //Thêm nút Authorize 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "Nhập token theo chuẩn: Bearer {token}",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "Bearer"
-    });
+    // Add services to the container.
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+    builder.Services.AddControllers()
+        .ConfigureApiBehaviorOptions(options =>
         {
-            new OpenApiSecurityScheme
+            options.InvalidModelStateResponseFactory = context =>
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+                // Lấy danh sách các lỗi validation
+                var errors = context.ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
 
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"];
+                // Đóng gói vào chuẩn ApiResponse của Vinh
+                var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
 
-//Add Jwt Authentication
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+                return new BadRequestObjectResult(response);
+            };
+        });
+    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(c =>
     {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!))
-    };
-});
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Warehouse API", Version = "v1" });
 
-builder.Services.AddDbContext<WarehouseDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb")));
-
-builder.Services.AddAutoMapper(config =>
-{
-    config.AddProfile<Application.Mappings.WarehouseProfile>();
-});
-
-builder.Services.AddMassTransit(x =>
-{
-    // 1. Đăng ký cái đài lắng nghe
-    x.AddConsumer<OrderAllocatedConsumer>();
-
-    // 2. Kết nối tới Bưu điện RabbitMQ
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        cfg.Host("localhost", "/", h =>
+        //Thêm nút Authorize 
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            h.Username("guest");
-            h.Password("guest");
+            Description = "Nhập token theo chuẩn: Bearer {token}",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "Bearer"
         });
 
-        // 3. Tự động cấu hình các endpoint (hòm thư) dựa trên tên của Consumer
-        cfg.ConfigureEndpoints(context);
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
     });
-});
 
-builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
-builder.Services.AddScoped<IWarehouseService, WarehouseService>();
-builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secretKey = jwtSettings["SecretKey"];
 
-var app = builder.Build();
+    //Add Jwt Authentication
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!))
+        };
+    });
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    builder.Services.AddDbContext<WarehouseDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb")));
+
+    builder.Services.AddAutoMapper(config =>
+    {
+        config.AddProfile<Application.Mappings.WarehouseProfile>();
+    });
+
+    builder.Services.AddMassTransit(x =>
+    {
+        // 1. Đăng ký cái đài lắng nghe
+        x.AddConsumer<OrderAllocatedConsumer>();
+
+        // 2. Kết nối tới Bưu điện RabbitMQ
+        x.UsingRabbitMq((context, cfg) =>
+        {
+            cfg.Host("localhost", "/", h =>
+            {
+                h.Username("guest");
+                h.Password("guest");
+            });
+
+            // 3. Tự động cấu hình các endpoint (hòm thư) dựa trên tên của Consumer
+            cfg.ConfigureEndpoints(context);
+        });
+    });
+
+    //Cấu hình Redis
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = "localhost:6379"; 
+        options.InstanceName = "WarehouseSystem_";
+    });
+
+    builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+    builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+    builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
+
+    var app = builder.Build();
+
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseHttpsRedirection();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.UseAuthorization();
+
+    app.MapControllers();
+
+    app.Run();
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Warehouse Service API terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
