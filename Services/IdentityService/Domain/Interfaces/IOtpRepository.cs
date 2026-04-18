@@ -12,5 +12,6 @@ namespace Domain.Interfaces
     {
         Task<Otps?> GetByEmailAsync(string email);
         Task<Otps?> GetByCodeAsync(string code);
+        Task<Otps?> GetByAccountIdAndPurposeAsync(string accountId, string purpose);
     }
 }

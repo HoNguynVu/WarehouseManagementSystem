@@ -23,5 +23,9 @@ namespace Infracstructure.Repositories
         {
             return _dbSet.Where(o => o.Account.Email == email && o.IsActive).OrderByDescending(o => o.CreatedAt).FirstOrDefaultAsync();
         }
+        public Task<Otps?> GetByAccountIdAndPurposeAsync(string accountId, string purpose)
+        {
+            return _dbSet.Where(o => o.AccountId == accountId && o.Purpose == purpose && o.IsActive).OrderByDescending(o => o.CreatedAt).FirstOrDefaultAsync();
+        }
     }
 }

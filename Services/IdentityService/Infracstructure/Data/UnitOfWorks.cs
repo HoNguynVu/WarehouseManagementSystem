@@ -61,7 +61,6 @@ namespace Infracstructure.Data
             }
             catch
             {
-                await _transaction.RollbackAsync();
                 throw;
             }
         }

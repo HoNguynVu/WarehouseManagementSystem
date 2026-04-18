@@ -9,7 +9,7 @@ namespace SharedLibrary.Responses
     // Class generic <T> cho phép bạn trả về bất kỳ kiểu dữ liệu nào (Product, Order, List<User>...)
     public class ApiResponse<T>
     {
-        public int StatusCode { get; set; }
+        public int StatusCode { get; set; } 
         public bool IsSuccess { get; set; }
         public string Message { get; set; } = string.Empty;
         public T? Data { get; set; }
