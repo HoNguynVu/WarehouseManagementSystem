@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # 1. Bưu điện RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: wms-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  # 2. Redis Cache 
+  redis:
+    image: redis:alpine
+    container_name: wms-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  # 3. Database PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: wms-postgres
+    environment:
+      POSTGRES_USER: admin           
+      POSTGRES_PASSWORD: 123        
+      POSTGRES_DB: warehouse_db      
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+# Khai báo ổ cứng ảo cho Docker
+volumes:
+  pgdata:
