@@ -86,6 +86,8 @@ namespace Application.Services
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) // Cho phép cache tồn tại trong 10 phút
             };
+
+            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dto), cacheOptions);
             return ApiResponse<WarehouseDTO>.Success(dto, "Lấy thông tin kho hàng thành công.");
         }
 
@@ -107,6 +109,7 @@ namespace Application.Services
             var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
 
             await _cache.RemoveAsync("all_warehouses");
+            await _cache.RemoveAsync($"warehouse_{id}");
             return ApiResponse<WarehouseDTO>.Success(dto, "Cập nhật kho hàng thành công.");
         }
 
@@ -117,13 +120,21 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {id}", 404);
             }
+
+            if (existingWarehouse != null && existingWarehouse.Inventories.Any())
+            {
+                return ApiResponse<bool>.Failure("Không thể xóa kho hàng vì còn tồn kho bên trong. Vui lòng xuất hết hàng trước khi xóa.", 400);
+            }
+
             _warehouseUow.Warehouse.Delete(existingWarehouse);
             var deleted = await _warehouseUow.Warehouse.SaveChangeAsync();
             if (!deleted)
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.", 500);
             }
+
             await _cache.RemoveAsync("all_warehouses");
+            await _cache.RemoveAsync($"warehouse_{id}");
             return ApiResponse<bool>.Success(true, "Xóa kho hàng thành công.");
         }
         public async Task<ApiResponse<bool>> AddInventoryToWarehouseAsync(string warehouseId, AddInventoryDTO inventoryDto)
@@ -152,7 +163,9 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
             }
+
             await _cache.RemoveAsync("all_warehouses");
+            await _cache.RemoveAsync($"warehouse_{warehouseId}");
             return ApiResponse<bool>.Success(true, "Nhập hàng vào kho thành công.");
         }
 
@@ -189,7 +202,9 @@ namespace Application.Services
             {
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.", 500);
             }
+
             await _cache.RemoveAsync("all_warehouses");
+            await _cache.RemoveAsync($"warehouse_{warehouseId}");
             return ApiResponse<bool>.Success(true, "Xuất hàng từ kho thành công.");
         }
 
@@ -249,6 +264,8 @@ namespace Application.Services
 
                 await _warehouseUow.CommitAsync();
                 await _cache.RemoveAsync("all_warehouses");
+                await _cache.RemoveAsync($"warehouse_{fromWarehouseId}");
+                await _cache.RemoveAsync($"warehouse_{dto.ToWarehouseId}");
                 return ApiResponse<bool>.Success(true, "Chuyển kho thành công!");
             }
             catch (Exception ex)
@@ -281,6 +298,7 @@ namespace Application.Services
 
                 await _warehouseUow.CommitAsync();
                 await _cache.RemoveAsync("all_warehouses");
+                await _cache.RemoveAsync($"warehouse_{warehouseId}");
                 return ApiResponse<bool>.Success(true, "Giữ hàng thành công!");
             }
             catch (Exception ex)
@@ -311,6 +329,7 @@ namespace Application.Services
 
                 await _warehouseUow.CommitAsync();
                 await _cache.RemoveAsync("all_warehouses");
+                await _cache.RemoveAsync($"warehouse_{warehouseId}");
                 return ApiResponse<bool>.Success(true, "Giải phóng hàng đã giữ thành công!");
             }
             catch (Exception ex)
@@ -347,6 +366,7 @@ namespace Application.Services
 
                 await _warehouseUow.CommitAsync();
                 await _cache.RemoveAsync("all_warehouses");
+                await _cache.RemoveAsync($"warehouse_{warehouseId}");
                 return ApiResponse<bool>.Success(true, "Xác nhận xuất hàng thành công!");
             }
             catch (Exception ex)
