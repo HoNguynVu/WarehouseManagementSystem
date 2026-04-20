@@ -32,6 +32,21 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: always
 
+  # 4. Database MongoDb
+  mongodb:
+    image: mongo:latest
+    container_name: wms-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_MONGO_PASS}
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodata:/data/db
+    restart: always
+
+
 # Khai báo ổ cứng ảo cho Docker
 volumes:
   pgdata:
+  mongodata:

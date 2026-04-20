@@ -1,0 +1,14 @@
+﻿using Domain.Entities;
+using SharedLibrary.Seedwork;
+
+namespace Domain.Interfaces
+{
+    public interface IProductRepository : IGenericInterface<Product, string>
+    {
+        Task<IEnumerable<Product>> GetAllAsync();
+        Task<Product?> GetByIdAsync(string id);
+        Task<Product> CreateProductAsync(Product product);
+        void Update(Product product);
+        void Delete(Product product);
+    }
+}
