@@ -3,7 +3,7 @@ using SharedLibrary.Responses;
 
 namespace Application.Interfaces
 {
-    public interface ICatalogService 
+    public interface IProductService 
     {
         Task<ApiResponse<IEnumerable<ProductDTO>>> GetAllProductsAsync();
         Task<ApiResponse<ProductDTO>> GetProductByIdAsync(string id);

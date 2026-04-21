@@ -12,6 +12,9 @@ namespace Application.DTOs
         
         [Range(0.01, double.MaxValue, ErrorMessage = "Giá sản phẩm phải lớn hơn 0")] 
         public double Price { get; set; }
+        [Required(ErrorMessage = "Mã danh mục không được để trống")]
         public string CategoryId { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Tên danh mục không được để trống")]
+        public Dictionary<string, string> Specifications { get; set; } = new Dictionary<string, string>();
     }
 }

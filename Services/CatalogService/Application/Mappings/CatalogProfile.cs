@@ -23,6 +23,17 @@ namespace Application.Mappings
                         return false;
                     return true;
                 }));
+            CreateMap<Category, CategoryDTO>();
+            CreateMap<CreateCategoryDTO, Category>();
+            CreateMap<UpdateCategoryDTO, Category>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) =>
+                {
+                    if (srcMember == null) 
+                        return false;
+                    if (srcMember is string str && string.IsNullOrWhiteSpace(str)) 
+                        return false;
+                    return true;
+                }));
         }
     }
 }

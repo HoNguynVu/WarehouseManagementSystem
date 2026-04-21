@@ -2,7 +2,7 @@
 {
     public class ClassPrefix
     {
-        public const string Catalog = "CAT";
         public const string Product = "PRO";
+        public const string Category = "CAT";
     }
 }

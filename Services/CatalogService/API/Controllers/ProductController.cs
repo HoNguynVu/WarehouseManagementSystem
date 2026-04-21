@@ -6,18 +6,18 @@ namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CatalogController : ControllerBase
+    public class ProductController : ControllerBase
     {
-        private readonly ICatalogService _catalogService;
-        public CatalogController(ICatalogService catalogService)
+        private readonly IProductService _productService;
+        public ProductController(IProductService productService)
         {
-            _catalogService = catalogService;
+            _productService = productService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var response = await _catalogService.GetAllProductsAsync();
+            var response = await _productService.GetAllProductsAsync();
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);
@@ -28,7 +28,7 @@ namespace API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var response = await _catalogService.GetProductByIdAsync(id);
+            var response = await _productService.GetProductByIdAsync(id);
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);
@@ -39,7 +39,7 @@ namespace API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateProductDTO dto)
         {
-            var response = await _catalogService.CreateProductAsync(dto);
+            var response = await _productService.CreateProductAsync(dto);
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);
@@ -50,7 +50,7 @@ namespace API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, UpdateProductDTO dto)
         {
-            var response = await _catalogService.UpdateProductAsync(id, dto);
+            var response = await _productService.UpdateProductAsync(id, dto);
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);
@@ -61,7 +61,7 @@ namespace API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var response = await _catalogService.DeleteProductAsync(id);
+            var response = await _productService.DeleteProductAsync(id);
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);

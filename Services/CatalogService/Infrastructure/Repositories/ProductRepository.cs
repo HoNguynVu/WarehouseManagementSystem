@@ -30,6 +30,13 @@ namespace Infrastructure.Repositories
             var result = await _context.Products.ReplaceOneAsync(p => p.Id == product.Id, product);
             return result.IsAcknowledged && result.ModifiedCount > 0;
         }
+        public async Task<bool> UpdateCategoryNameForAllProductsAsync(string categoryId, string newCategoryName)
+        {
+            var filter = Builders<Product>.Filter.Eq(p => p.CategoryId, categoryId);
+            var update = Builders<Product>.Update.Set(p => p.CategoryName, newCategoryName);
+            var result = await _context.Products.UpdateManyAsync(filter, update);
+            return result.IsAcknowledged && result.ModifiedCount > 0;
+        }
         public async Task<bool> DeleteProductAsync(string id)
         {
             var result = await _context.Products.DeleteOneAsync(p => p.Id == id);

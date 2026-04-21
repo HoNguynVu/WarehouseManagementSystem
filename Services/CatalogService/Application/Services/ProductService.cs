@@ -11,15 +11,17 @@ using System.Text.Json;
 
 namespace Application.Services
 {
-    public class CatalogService : ICatalogService
+    public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepository;
+        private readonly ICategoryRepository _categoryRepository;
         private readonly IMapper _mapper;
         private readonly IDistributedCache _cache;
-        private readonly ILogger<CatalogService> _logger;
-        public CatalogService(IProductRepository productRepository, IMapper mapper, IDistributedCache cache, ILogger<CatalogService> logger)
+        private readonly ILogger<ProductService> _logger;
+        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IMapper mapper, IDistributedCache cache, ILogger<ProductService> logger)
         {
             _productRepository = productRepository;
+            _categoryRepository = categoryRepository;
             _mapper = mapper;
             _cache = cache;
             _logger = logger;
@@ -93,7 +95,12 @@ namespace Application.Services
         {
             try
             {
+                var category = await _categoryRepository.GetByIdAsync(productDto.CategoryId);
+                if (category == null)
+                    return ApiResponse<ProductDTO>.Failure($"Danh mục với ID {productDto.CategoryId} không tồn tại.", 400);
+
                 var product = _mapper.Map<Product>(productDto);
+                product.CategoryName = category.Name;
                 product.Id = IdGenerator.GenerateId(ClassPrefix.Product);
                 product.CreatedAt = DateTimeOffset.UtcNow;
 
@@ -119,6 +126,15 @@ namespace Application.Services
                 var existingProduct = await _productRepository.GetByIdAsync(id);
                 if (existingProduct == null)
                     return ApiResponse<ProductDTO>.Failure($"Không tìm thấy sản phẩm với ID: {id}", 404);
+
+                if (!string.IsNullOrEmpty(productDto.CategoryId) && productDto.CategoryId != existingProduct.CategoryId)
+                {
+                    var category = await _categoryRepository.GetByIdAsync(productDto.CategoryId);
+                    if (category == null)
+                        return ApiResponse<ProductDTO>.Failure("Danh mục mới không tồn tại.", 400);
+
+                    existingProduct.CategoryName = category.Name;
+                }
 
                 _mapper.Map(productDto, existingProduct);
                 existingProduct.UpdatedAt = DateTimeOffset.UtcNow;
