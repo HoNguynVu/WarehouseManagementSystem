@@ -13,6 +13,5 @@ namespace Application.DTOs
         [Range(0.01, double.MaxValue, ErrorMessage = "Giá sản phẩm phải lớn hơn 0")] 
         public double Price { get; set; }
         public string CategoryId { get; set; } = string.Empty;
-        public string CategoryName { get; set; } = string.Empty;
     }
 }

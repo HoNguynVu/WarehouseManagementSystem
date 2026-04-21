@@ -12,6 +12,17 @@ namespace Application.Mappings
             CreateMap<CreateProductDTO, Product>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
+            CreateMap<UpdateProductDTO, Product>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) =>
+                {
+                    if (srcMember == null) 
+                        return false;
+                    if (srcMember is string str && string.IsNullOrWhiteSpace(str)) 
+                        return false;
+                    return true;
+                }));
         }
     }
 }

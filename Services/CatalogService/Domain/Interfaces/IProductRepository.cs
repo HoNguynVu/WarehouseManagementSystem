@@ -8,6 +8,8 @@ namespace Domain.Interfaces
         Task<IEnumerable<Product>> GetAllAsync();
         Task<Product?> GetByIdAsync(string id);
         Task<Product> CreateProductAsync(Product product);
+        Task<bool> UpdateProductAsync(Product product);
+        Task<bool> DeleteProductAsync(string id);
         void Update(Product product);
         void Delete(Product product);
     }

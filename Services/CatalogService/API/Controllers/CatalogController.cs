@@ -46,5 +46,27 @@ namespace API.Controllers
             }
             return Ok(response);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(string id, UpdateProductDTO dto)
+        {
+            var response = await _catalogService.UpdateProductAsync(id, dto);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var response = await _catalogService.DeleteProductAsync(id);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
     }
 }

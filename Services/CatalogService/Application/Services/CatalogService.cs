@@ -111,5 +111,61 @@ namespace Application.Services
                 return ApiResponse<ProductDTO>.Failure($"Lỗi hệ thống khi tạo sản phẩm: {ex.Message}", 500);
             }
         }
+
+        public async Task<ApiResponse<ProductDTO>> UpdateProductAsync(string id, UpdateProductDTO productDto)
+        {
+            try
+            {
+                var existingProduct = await _productRepository.GetByIdAsync(id);
+                if (existingProduct == null)
+                    return ApiResponse<ProductDTO>.Failure($"Không tìm thấy sản phẩm với ID: {id}", 404);
+
+                _mapper.Map(productDto, existingProduct);
+                existingProduct.UpdatedAt = DateTimeOffset.UtcNow;
+
+                var isUpdated = await _productRepository.UpdateProductAsync(existingProduct);
+                if (!isUpdated)
+                    return ApiResponse<ProductDTO>.Failure("Không có thay đổi nào được lưu.", 400);
+
+                var dto = _mapper.Map<ProductDTO>(existingProduct);
+
+                await _cache.RemoveAsync("all_products");
+                await _cache.RemoveAsync($"product_{id}");
+
+                _logger.LogInformation("Cập nhật thành công sản phẩm: {ProductId}", id);
+                return ApiResponse<ProductDTO>.Success(dto, "Câp nhật sản phẩm thành công.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật sản phẩm với ID {Id}: {Message}", id, ex.Message);
+                return ApiResponse<ProductDTO>.Failure($"Lỗi hệ thống khi cập nhật sản phẩm: {ex.Message}", 500);
+
+            }
+        }
+
+        public async Task<ApiResponse<bool>> DeleteProductAsync(string id)
+        {
+            try
+            {
+                var existingProduct = await _productRepository.GetByIdAsync(id);
+                if (existingProduct == null)
+                    return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với ID: {id}", 404);
+
+                var isDeleted = await _productRepository.DeleteProductAsync(id);
+                if (!isDeleted)
+                    return ApiResponse<bool>.Failure("Xóa sản phẩm thất bại.", 400);
+
+                await _cache.RemoveAsync("all_products");
+                await _cache.RemoveAsync($"product_{id}");
+
+                _logger.LogInformation("Xóa thành công sản phẩm: {ProductId}", id);
+                return ApiResponse<bool>.Success(true, "Xóa sản phẩm thành công.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xóa sản phẩm với ID {Id}: {Message}", id, ex.Message);
+                return ApiResponse<bool>.Failure($"Lỗi hệ thống khi xóa sản phẩm: {ex.Message}", 500);
+            }
+        }
     }
 }
