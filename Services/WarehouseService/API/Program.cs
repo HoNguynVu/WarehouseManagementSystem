@@ -76,6 +76,13 @@ try
         });
     });
 
+    // Add HttpClient 
+    builder.Services.AddHttpClient("CatalogClient", client =>
+    {
+        var catalogUrl = builder.Configuration["CatalogApiUrl"];
+        client.BaseAddress = new Uri(catalogUrl!);
+    });
+
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
     var secretKey = jwtSettings["SecretKey"];
 

@@ -10,7 +10,6 @@ namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class WarehouseController : ControllerBase
     {
         private readonly IWarehouseService _warehouseService;
@@ -30,7 +29,6 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(CreateWarehouseDTO dto)
         {
             var response = await _warehouseService.CreateWarehouseAsync(dto);
@@ -42,7 +40,6 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var response = await _warehouseService.GetAllWarehousesAsync();
@@ -98,7 +95,6 @@ namespace API.Controllers
         }
 
         [HttpPost("{warehouseId}/stock-out")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DirectStockOut(string warehouseId, [FromBody] DirectStockOutDTO dto)
         {
             var response = await _warehouseService.DirectStockOutAsync(warehouseId, dto);
@@ -154,6 +150,5 @@ namespace API.Controllers
             }
             return Ok(response);
         }
-
     }
 }

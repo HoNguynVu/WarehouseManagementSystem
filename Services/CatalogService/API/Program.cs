@@ -4,10 +4,12 @@ using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Settings;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Serilog;
 using SharedLibrary.Middlewares;
+using SharedLibrary.Responses;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -22,7 +24,23 @@ try
 
     // Add services to the container.
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .ConfigureApiBehaviorOptions(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                // Lấy danh sách các lỗi validation
+                var errors = context.ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+
+                // Đóng gói vào chuẩn ApiResponse của Vinh
+                var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
+
+                return new BadRequestObjectResult(response);
+            };
+        });
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
