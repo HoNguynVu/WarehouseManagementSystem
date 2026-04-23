@@ -15,6 +15,11 @@ namespace Application.Mappings
             CreateMap<UpdateProductDTO, Product>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.Price, opt =>
+                {
+                    opt.PreCondition(src => src.Price.HasValue);
+                    opt.MapFrom(src => src.Price!.Value);
+                })
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) =>
                 {
                     if (srcMember == null) 

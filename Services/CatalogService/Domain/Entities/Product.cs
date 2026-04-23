@@ -1,4 +1,6 @@
-﻿using SharedLibrary.Seedwork;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using SharedLibrary.Seedwork;
 
 namespace Domain.Entities
 {
@@ -6,6 +8,8 @@ namespace Domain.Entities
     {
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        [BsonElement("Price")]
+        [BsonRepresentation(BsonType.Decimal128)]
         public decimal Price { get; set; }
         public string CategoryId { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;    

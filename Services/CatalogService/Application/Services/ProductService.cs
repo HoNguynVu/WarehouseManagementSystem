@@ -5,9 +5,11 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;    
 using SharedLibrary.Responses;
+using SharedLibrary.IntergrationEvents;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using MassTransit;
 
 namespace Application.Services
 {
@@ -18,13 +20,15 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IDistributedCache _cache;
         private readonly ILogger<ProductService> _logger;
-        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IMapper mapper, IDistributedCache cache, ILogger<ProductService> logger)
+        private readonly IPublishEndpoint _publishEndpoint;
+        public ProductService(IProductRepository productRepository, ICategoryRepository categoryRepository, IMapper mapper, IDistributedCache cache, ILogger<ProductService> logger, IPublishEndpoint publishEndpoint)
         {
             _productRepository = productRepository;
             _categoryRepository = categoryRepository;
             _mapper = mapper;
             _cache = cache;
             _logger = logger;
+            _publishEndpoint = publishEndpoint;
         }
         public async Task<ApiResponse<IEnumerable<ProductDTO>>> GetAllProductsAsync()
         {
@@ -74,6 +78,7 @@ namespace Application.Services
                 var product = await _productRepository.GetByIdAsync(id);
                 if (product == null)
                     return ApiResponse<ProductDTO>.Failure($"Không tìm thấy sản phẩm với ID: {id}", 404);
+
                 var dto = _mapper.Map<ProductDTO>(product);
 
                 var cacheOptions = new DistributedCacheEntryOptions
@@ -126,6 +131,8 @@ namespace Application.Services
                 var existingProduct = await _productRepository.GetByIdAsync(id);
                 if (existingProduct == null)
                     return ApiResponse<ProductDTO>.Failure($"Không tìm thấy sản phẩm với ID: {id}", 404);
+                
+                string oldProductName = existingProduct.Name;
 
                 if (!string.IsNullOrEmpty(productDto.CategoryId) && productDto.CategoryId != existingProduct.CategoryId)
                 {
@@ -144,6 +151,16 @@ namespace Application.Services
                     return ApiResponse<ProductDTO>.Failure("Không có thay đổi nào được lưu.", 400);
 
                 var dto = _mapper.Map<ProductDTO>(existingProduct);
+
+                // Gửi sự kiện cập nhật sản phẩm
+                if(oldProductName != existingProduct.Name) 
+                {
+                    await _publishEndpoint.Publish(new UpdateProductEvent
+                    {
+                        ProductId = existingProduct.Id,
+                        ProductName = existingProduct.Name
+                    });
+                }
 
                 await _cache.RemoveAsync("all_products");
                 await _cache.RemoveAsync($"product_{id}");
