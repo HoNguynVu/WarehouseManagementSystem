@@ -16,11 +16,13 @@ namespace Application.Services
         private readonly IWarehouseUow _warehouseUow;
         private readonly IMapper _mapper;
         private readonly IDistributedCache _cache;
-        public WarehouseService(IWarehouseUow warehouseUow, IMapper mapper, IDistributedCache cache)
+        private readonly IHttpClientFactory _httpClientFactory;
+        public WarehouseService(IWarehouseUow warehouseUow, IMapper mapper, IDistributedCache cache, IHttpClientFactory httpClientFactory)
         {
             _warehouseUow = warehouseUow;
             _mapper = mapper;
             _cache = cache;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<ApiResponse<Warehouse>> CreateWarehouseAsync(CreateWarehouseDTO warehouseDto)
@@ -152,8 +154,32 @@ namespace Application.Services
                 return ApiResponse<bool>.Failure($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}", 400);
             }
 
+            var client = _httpClientFactory.CreateClient("CatalogClient");
+            var response = await client.GetAsync($"/api/Product/{inventoryDto.ProductId}");
+            if(!response.IsSuccessStatusCode)
+            {
+                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {inventoryDto.ProductId} trong hệ thống.", 400);
+            }
+
+            var responseString = await response.Content.ReadAsStringAsync();
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            var catalogResult = JsonSerializer.Deserialize<ApiResponse<CatalogProductDTO>>(responseString, jsonOptions);
+            if (catalogResult == null || !catalogResult.IsSuccess || catalogResult.Data == null)
+            {
+                return ApiResponse<bool>.Failure("Lỗi khi đọc dữ liệu từ Catalog Service.", 500);
+            }
+
+            string ProductId = catalogResult.Data.Id;
+            string ProductName = catalogResult.Data.Name;
+            
             var newInventory = _mapper.Map<Inventory>(inventoryDto);
             newInventory.Id = IdGenerator.GenerateId(ClassPrefix.Inventory);
+            newInventory.ProductName = ProductName;
+            newInventory.ProductId = ProductId;
             newInventory.CreatedAt = DateTime.UtcNow;
             newInventory.WarehouseId = warehouseId;
 
