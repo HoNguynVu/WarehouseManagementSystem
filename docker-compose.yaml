@@ -45,8 +45,36 @@ services:
       - mongodata:/data/db
     restart: always
 
+    # 5. Database SQL Server riêng cho IdentityService (Port 1434)
+  identity_sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: wms-identity-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_IDENTITY_SQL_PASS}
+    ports:
+      - "1434:1433"
+    volumes:
+      - identity_sqldata:/var/opt/mssql
+    restart: always
+
+  # 6. Database SQL Server riêng cho OrderService (Port 1435)
+  order_sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: wms-order-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_ORDER_SQL_PASS}
+    ports:
+      - "1435:1433"
+    volumes:
+      - order_sqldata:/var/opt/mssql
+    restart: always
+
 
 # Khai báo ổ cứng ảo cho Docker
 volumes:
   pgdata:
   mongodata:
+  identity_sqldata:
+  order_sqldata:
