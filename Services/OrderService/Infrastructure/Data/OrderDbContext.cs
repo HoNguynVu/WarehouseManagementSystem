@@ -21,6 +21,7 @@ namespace Infrastructure.Data
 
         public virtual DbSet<Order> Orders { get; set; }
         public virtual DbSet<OrderItem> OrderItems { get; set; }
+        public virtual DbSet<Payment> Payments { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -45,6 +46,15 @@ namespace Infrastructure.Data
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.OrderItems)
                     .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.ToTable("Payments");
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Order)
+                    .WithOne(o => o.Payment)
+                    .HasForeignKey<Payment>(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }
