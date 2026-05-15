@@ -1,5 +1,6 @@
 using Application.DTOs;
 using Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
@@ -7,6 +8,7 @@ namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -17,9 +19,19 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(CreateOrderDTO dto)
+        public async Task<IActionResult> Create([FromBody] CreateOrderDTO dto)
         {
-            var response = await _orderService.CreateOrderAsync(dto);
+            //User là property có sẵn của ControllerBase — class mà OrderController kế thừa.
+            // Khi request đến, ASP.NET Core middleware JWT Bearer tự động:
+            // Đọc header Authorization: Bearer <token>
+            // Giải mã JWT token
+            // Chuyển tất cả claims trong token thành một ClaimsPrincipal
+            // Gán vào HttpContext.User
+            var accountId = User.FindFirst("accountId")?.Value; 
+            if (string.IsNullOrEmpty(accountId))
+                return Unauthorized();
+
+            var response = await _orderService.CreateOrderAsync(dto, accountId);
             if (!response.IsSuccess)
                 return StatusCode(response.StatusCode, response);
 

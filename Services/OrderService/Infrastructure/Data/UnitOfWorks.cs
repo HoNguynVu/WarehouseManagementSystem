@@ -49,28 +49,34 @@ namespace Infrastructure.Data
         public async Task CommitAsync()
         {
             if (_transaction == null)
-            {
                 throw new InvalidOperationException("No transaction in progress.");
-            }
 
             try
             {
                 await _context.SaveChangesAsync();
                 await _transaction.CommitAsync();
             }
-            catch
+            finally
             {
-                throw;
+                await _transaction.DisposeAsync();
+                _transaction = null;
             }
         }
 
         public async Task RollbackAsync()
         {
             if (_transaction == null)
-            {
                 throw new InvalidOperationException("No transaction in progress.");
+
+            try
+            {
+                await _transaction.RollbackAsync();
             }
-            await _transaction.RollbackAsync();
+            finally
+            {
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
 
     }

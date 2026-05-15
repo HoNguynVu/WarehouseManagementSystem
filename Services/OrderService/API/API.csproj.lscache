@@ -374,6 +374,7 @@ WeatherForecast.cs
  masstransit.abstractions/8.5.9/lib/net8.0/MassTransit.Abstractions.dll
  masstransit.rabbitmq/8.5.9/lib/net8.0/MassTransit.RabbitMqTransport.dll
  masstransit/8.5.9/lib/net8.0/MassTransit.dll
+ microsoft.aspnetcore.authentication.jwtbearer/8.0.27/lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
  microsoft.bcl.asyncinterfaces/6.0.0/lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll
  microsoft.codeanalysis.common/4.5.0/lib/netcoreapp3.1/Microsoft.CodeAnalysis.dll
  microsoft.codeanalysis.csharp.workspaces/4.5.0/lib/netcoreapp3.1/Microsoft.CodeAnalysis.CSharp.Workspaces.dll
@@ -396,8 +397,8 @@ WeatherForecast.cs
  microsoft.identitymodel.abstractions/8.14.0/lib/net8.0/Microsoft.IdentityModel.Abstractions.dll
  microsoft.identitymodel.jsonwebtokens/8.14.0/lib/net8.0/Microsoft.IdentityModel.JsonWebTokens.dll
  microsoft.identitymodel.logging/8.14.0/lib/net8.0/Microsoft.IdentityModel.Logging.dll
- microsoft.identitymodel.protocols.openidconnect/6.35.0/lib/net6.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
- microsoft.identitymodel.protocols/6.35.0/lib/net6.0/Microsoft.IdentityModel.Protocols.dll
+ microsoft.identitymodel.protocols.openidconnect/7.1.2/lib/net8.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+ microsoft.identitymodel.protocols/7.1.2/lib/net8.0/Microsoft.IdentityModel.Protocols.dll
  microsoft.identitymodel.tokens/8.14.0/lib/net8.0/Microsoft.IdentityModel.Tokens.dll
  microsoft.openapi/1.6.14/lib/netstandard2.0/Microsoft.OpenApi.dll
  microsoft.sqlserver.server/1.0.0/lib/netstandard2.0/Microsoft.SqlServer.Server.dll
@@ -424,7 +425,7 @@ WeatherForecast.cs
  system.composition.runtime/6.0.0/lib/net6.0/System.Composition.Runtime.dll
  system.composition.typedparts/6.0.0/lib/net6.0/System.Composition.TypedParts.dll
  system.diagnostics.diagnosticsource/10.0.5/lib/net8.0/System.Diagnostics.DiagnosticSource.dll
- system.identitymodel.tokens.jwt/6.35.0/lib/net6.0/System.IdentityModel.Tokens.Jwt.dll
+ system.identitymodel.tokens.jwt/7.1.2/lib/net8.0/System.IdentityModel.Tokens.Jwt.dll
  system.memory.data/1.0.2/lib/netstandard2.0/System.Memory.Data.dll
  system.security.cryptography.protecteddata/6.0.0/lib/net6.0/System.Security.Cryptography.ProtectedData.dll
 

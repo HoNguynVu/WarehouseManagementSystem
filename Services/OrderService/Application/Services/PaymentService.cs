@@ -3,6 +3,7 @@ using Application.Helpers;
 using Application.Interfaces;
 using Application.Settings;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Interfaces;
 using Infrastructure.UnitOfWorks;
 using MassTransit;
@@ -12,6 +13,7 @@ using Newtonsoft.Json;
 using SharedLibrary.IntergrationEvents;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,18 +45,14 @@ namespace Application.Services
         public async Task<(int StatusCode, PaymentLinkDTO dto)> CreateZaloPayLinkForOrder(string orderId, decimal amount)
         {
             if (string.IsNullOrEmpty(orderId))
-            {
                 return (400, new PaymentLinkDTO { IsSuccess = false, Message = "Invalid order ID" });
-            }
 
             var appTransId = IdGenerator.GenerateId(PaymentConstants.PrefixOrder);
             string description = $"Thanh toan don hang {orderId}";
 
             string orderUrl = await CallZaloPayCreateOrder(appTransId, (long)amount, description, orderId);
             if (string.IsNullOrEmpty(orderUrl))
-            {
                 return (500, new PaymentLinkDTO { IsSuccess = false, Message = "Failed to create ZaloPay order" });
-            }
 
             var payment = new Payment
             {
@@ -67,6 +65,7 @@ namespace Application.Services
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
+            await _uow.BeginTransactionAsync();
             _uow.Payments.Create(payment);
             await _uow.CommitAsync();
 
@@ -136,18 +135,18 @@ namespace Application.Services
 
                 string appTransId = dataJson.app_trans_id;
                 var payment = await _uow.Payments.GetByTransactionIdAsync(appTransId);
-                
+
                 if (payment == null)
                 {
                     _logger.LogWarning("Payment not found for TransactionId: {AppTransId}", appTransId);
                     return false;
                 }
 
+                // Idempotency: already processed
                 if (payment.Status == PaymentConstants.StatusCompleted)
-                {
-                    // Already processed
                     return true;
-                }
+
+                await _uow.BeginTransactionAsync();
 
                 payment.Status = PaymentConstants.StatusCompleted;
                 payment.UpdatedAt = DateTimeOffset.UtcNow;
@@ -156,14 +155,22 @@ namespace Application.Services
                 var order = await _uow.Orders.GetByIdAsync(payment.OrderId);
                 if (order != null)
                 {
-                    order.Status = "Paid";
+                    order.Status = OrderStatus.Paid;
                     order.UpdatedAt = DateTimeOffset.UtcNow;
                     _uow.Orders.Update(order);
                 }
 
                 await _uow.CommitAsync();
 
-                // Publish Event
+                // Publish events only after DB is committed
+                var orderItems = await _uow.OrderItems.GetByOrderId(payment.OrderId);
+                await _publishEndpoint.Publish(new CreateOrderEvent
+                {
+                    OrderId = payment.OrderId,
+                    AccountId = order?.AccountId ?? string.Empty,
+                    ItemIds = orderItems.Select(i => i.ProductId).ToList()
+                });
+
                 await _publishEndpoint.Publish(new PaymentSuccessEvent
                 {
                     OrderId = payment.OrderId,
