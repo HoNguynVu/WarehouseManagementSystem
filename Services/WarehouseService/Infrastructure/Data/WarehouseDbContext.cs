@@ -10,6 +10,7 @@ namespace Infrastructure.Data
         }
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<Inventory> Inventories { get; set; }
+        public virtual DbSet<StockReservation> StockReservations { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Warehouse>(entity => {

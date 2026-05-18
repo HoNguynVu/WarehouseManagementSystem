@@ -10,6 +10,5 @@
         public string? CreatedBy { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
         public string? UpdatedBy { get; set; }
-        public List<InventoryDTO> Inventories { get; set; } = new List<InventoryDTO>();
     }
 }

@@ -16,9 +16,9 @@ namespace Infrastructure.Repositories
         {
             await _context.Warehouses.AddAsync(warehouse);
         }
-        public async Task<bool> SaveChangeAsync()
+        public async Task<bool> SaveChangeAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.SaveChangesAsync() > 0;
+            return await _context.SaveChangesAsync(cancellationToken) > 0;
         }
         public async Task<IEnumerable<Warehouse>> GetAllAsync()
         {
