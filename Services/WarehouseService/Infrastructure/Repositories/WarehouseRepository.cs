@@ -42,5 +42,12 @@ namespace Infrastructure.Repositories
                 .Include(w => w.Inventories)
                 .FirstOrDefaultAsync(w => w.Id == id);
         }
+        public async Task<IEnumerable<Warehouse>> GetWarehousesContainingProductAsync(string productId)
+        {
+            return await _context.Warehouses
+                .Include(w => w.Inventories)
+                .Where(w => w.Inventories.Any(i => i.ProductId == productId))
+                .ToListAsync();
+        }
     }
 }

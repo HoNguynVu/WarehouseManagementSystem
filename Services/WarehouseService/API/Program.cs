@@ -13,6 +13,7 @@ using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
 using Serilog;
+using SharedLibrary.IntergrationEvents;
 
 //Add Serilog configuration
 Log.Logger = new LoggerConfiguration()
@@ -76,6 +77,13 @@ try
         });
     });
 
+    // Add HttpClient 
+    builder.Services.AddHttpClient("CatalogClient", client =>
+    {
+        var catalogUrl = builder.Configuration["CatalogApiUrl"];
+        client.BaseAddress = new Uri(catalogUrl!);
+    });
+
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
     var secretKey = jwtSettings["SecretKey"];
 
@@ -111,7 +119,7 @@ try
     {
         // 1. Đăng ký cái đài lắng nghe
         x.AddConsumer<OrderAllocatedConsumer>();
-
+        x.AddConsumer<ProductUpdatedConsumer>();
         // 2. Kết nối tới Bưu điện RabbitMQ
         x.UsingRabbitMq((context, cfg) =>
         {
