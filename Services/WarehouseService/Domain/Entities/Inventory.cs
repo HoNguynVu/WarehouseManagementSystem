@@ -1,4 +1,5 @@
 ﻿using SharedLibrary.Seedwork;
+using System.ComponentModel.DataAnnotations;
 
 namespace Domain.Entities
 {
@@ -9,6 +10,8 @@ namespace Domain.Entities
         public string WarehouseId { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; } = 0;
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
         public virtual Warehouse Warehouse { get; set; }
     }
 }

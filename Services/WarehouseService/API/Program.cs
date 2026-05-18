@@ -13,7 +13,8 @@ using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
 using Serilog;
-using SharedLibrary.IntergrationEvents;
+using SharedLibrary.IntegrationEvents;
+using System.Reflection;
 
 //Add Serilog configuration
 Log.Logger = new LoggerConfiguration()
@@ -118,7 +119,6 @@ try
     builder.Services.AddMassTransit(x =>
     {
         // 1. Đăng ký cái đài lắng nghe
-        x.AddConsumer<OrderAllocatedConsumer>();
         x.AddConsumer<ProductUpdatedConsumer>();
         // 2. Kết nối tới Bưu điện RabbitMQ
         x.UsingRabbitMq((context, cfg) =>
@@ -144,6 +144,7 @@ try
     builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
     builder.Services.AddScoped<IWarehouseService, WarehouseService>();
     builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
+    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application")));
 
     var app = builder.Build();
 

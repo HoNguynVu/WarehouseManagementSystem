@@ -3,8 +3,9 @@ using Application.Interfaces;
 using Infrastructure.Data;
 using Application.DTOs;
 using MassTransit;
-using Application.Events;
 using Microsoft.AspNetCore.Authorization;
+using MediatR;
+using Application.Features.Orders;
 
 namespace API.Controllers
 {
@@ -14,18 +15,12 @@ namespace API.Controllers
     {
         private readonly IWarehouseService _warehouseService;
         private readonly IPublishEndpoint _publishEndpoint;
-        public WarehouseController(IWarehouseService warehouseService, IPublishEndpoint publishEndpoint)
+        private readonly IMediator _mediator;
+        public WarehouseController(IWarehouseService warehouseService, IPublishEndpoint publishEndpoint, IMediator mediator )
         {
             _warehouseService = warehouseService;
             _publishEndpoint = publishEndpoint;
-        }
-
-        [HttpPost("test-fake-order")]
-        public async Task<IActionResult> FakeOrder([FromBody] OrderAllocatedEvent fakeOrder)
-        {
-            // Vứt bức thư lên RabbitMQ
-            await _publishEndpoint.Publish(fakeOrder);
-            return Ok("Đã ném sự kiện Đặt hàng lên RabbitMQ! Hãy check cửa sổ Console (Terminal) xem Consumer có bắt được không nhé!");
+            _mediator = mediator;
         }
 
         [HttpPost]
@@ -118,32 +113,34 @@ namespace API.Controllers
 
         }
 
-        [HttpPost("{warehouseId}/reserve")]
-        public async Task<IActionResult> ReserveStock(string warehouseId, [FromBody] ReserveStockDTO dto)
-        {
-            var response = await _warehouseService.ReserveStockAsync(warehouseId, dto);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
-        }
-
-        [HttpPost("{warehouseId}/release")]
-        public async Task<IActionResult> ReleaseStock(string warehouseId, [FromBody] ReleaseStockDTO dto)
-        {
-            var response = await _warehouseService.ReleaseReservedStockAsync(warehouseId, dto);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
-        }
-
         [HttpPost("{warehouseId}/confirm-out")]
         public async Task<IActionResult> ConfirmStockOut(string warehouseId, [FromBody] ConfirmStockOutDTO dto)
         {
             var response = await _warehouseService.ConfirmStockOutAsync(warehouseId, dto);
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost("allocate-order")]
+        public async Task<IActionResult> AllocateOrder([FromBody] AllocateOrderCommand command)
+        {
+            var response = await _mediator.Send(command);
+
+            if (!response.IsSuccess)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost("release-order")]
+        public async Task<IActionResult> ReleaseOrder([FromBody] ReleaseOrderCommand command, CancellationToken cancellationToken)
+        {
+            var response = await _mediator.Send(command, cancellationToken);
+
             if (!response.IsSuccess)
             {
                 return StatusCode(response.StatusCode, response);

@@ -5,7 +5,7 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;    
 using SharedLibrary.Responses;
-using SharedLibrary.IntergrationEvents;
+using SharedLibrary.IntegrationEvents;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;

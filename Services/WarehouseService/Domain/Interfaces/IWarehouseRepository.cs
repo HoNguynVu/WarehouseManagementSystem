@@ -5,7 +5,7 @@ namespace Domain.Interfaces
     public interface IWarehouseRepository
     {
         Task AddAsync(Warehouse warehouse);
-        Task<bool> SaveChangeAsync();
+        Task<bool> SaveChangeAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<Warehouse>> GetAllAsync();
         Task<Warehouse?> GetByIdAsync(string id);
         void Update(Warehouse warehouse);
