@@ -13,7 +13,7 @@ using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
 using Serilog;
-using SharedLibrary.IntergrationEvents;
+using SharedLibrary.IntegrationEvents;
 using System.Reflection;
 
 //Add Serilog configuration

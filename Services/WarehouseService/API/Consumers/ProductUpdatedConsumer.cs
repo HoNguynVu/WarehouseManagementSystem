@@ -1,6 +1,6 @@
 ﻿using Domain.Interfaces;
 using MassTransit;
-using SharedLibrary.IntergrationEvents;
+using SharedLibrary.IntegrationEvents;
 
 namespace API.Consumers
 {

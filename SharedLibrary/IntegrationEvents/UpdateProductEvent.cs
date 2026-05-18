@@ -1,4 +1,4 @@
-﻿namespace SharedLibrary.IntergrationEvents
+﻿namespace SharedLibrary.IntegrationEvents
 {
     public class UpdateProductEvent
     {

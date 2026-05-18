@@ -1,6 +1,6 @@
 using System;
 
-namespace SharedLibrary.IntergrationEvents
+namespace SharedLibrary.IntegrationEvents
 {
     public class PaymentSuccessEvent
     {
