@@ -33,7 +33,7 @@ namespace API.Consumers
 
             if (hasChanges)
             {
-                await _warehouseUow.Warehouse.SaveChangeAsync();
+                await _warehouseUow.SaveChangeAsync();
                 _logger.LogInformation(
                     "[RabbitMQ] Đã đồng bộ tên sản phẩm {ProductId} thành '{ProductName}' trong kho!",
                     message.ProductId,

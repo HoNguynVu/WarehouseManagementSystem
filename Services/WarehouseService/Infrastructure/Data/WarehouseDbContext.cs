@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
+using MassTransit;
 
 namespace Infrastructure.Data
 {
@@ -21,6 +22,9 @@ namespace Infrastructure.Data
                 .WithMany(w => w.Inventories)
                 .HasForeignKey(i => i.WarehouseId)
                 .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+            modelBuilder.AddOutboxStateEntity();
         }
     }
 }

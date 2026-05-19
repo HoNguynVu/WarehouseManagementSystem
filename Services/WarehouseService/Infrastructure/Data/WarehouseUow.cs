@@ -10,8 +10,6 @@ namespace Infrastructure.Data
     {
         private readonly WarehouseDbContext _context;
 
-        private IDbContextTransaction? _transaction;
-
         //Khai báo property
         public IWarehouseRepository Warehouse { get; }
         public WarehouseUow(WarehouseDbContext context)
@@ -19,45 +17,14 @@ namespace Infrastructure.Data
             _context = context;
             Warehouse = new WarehouseRepository(_context);
         }
-        public async Task BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        public async Task<bool> SaveChangeAsync(CancellationToken cancellationToken = default)
         {
-            if (_transaction == null)
-            {
-                _transaction = await _context.Database.BeginTransactionAsync(isolationLevel);
-            }
+            return await _context.SaveChangesAsync(cancellationToken) > 0;
         }
-        public async Task BeginTransactionAsync()
-        {
-            if (_transaction == null)
-            {
-                _transaction = await _context.Database.BeginTransactionAsync();
-            }
-        }
-        public async Task CommitAsync()
-        {
-            if (_transaction == null)
-            {
-                throw new InvalidOperationException("No transaction in progress.");
-            }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                await _transaction.CommitAsync();
-            }
-            catch
-            {
-                await _transaction.RollbackAsync();
-                throw;
-            }
-        }
-        public async Task RollbackAsync()
+        public void ClearTracker()
         {
-            if (_transaction == null)
-            {
-                throw new InvalidOperationException("No transaction in progress.");
-            }
-            await _transaction.RollbackAsync();
+            _context.ChangeTracker.Clear();
         }
     }
 }

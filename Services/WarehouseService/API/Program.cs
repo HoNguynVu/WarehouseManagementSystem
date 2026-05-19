@@ -13,6 +13,7 @@ using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
 using Serilog;
+using Infrastructure.Data;
 using SharedLibrary.IntegrationEvents;
 using System.Reflection;
 
@@ -118,6 +119,17 @@ try
 
     builder.Services.AddMassTransit(x =>
     {
+        // Đăng ký Outbox để đảm bảo tính nhất quán khi gửi sự kiện ra ngoài sau khi đã cập nhật database thành công
+        x.AddEntityFrameworkOutbox<WarehouseDbContext>(o =>
+        {
+            // Quét database mỗi giây để xem có thư nào chưa gửi thì gửi đi
+            o.QueryDelay = TimeSpan.FromSeconds(1);
+
+            // Khai báo loại Database đang dùng
+            o.UsePostgres();
+            o.UseBusOutbox();
+        });
+
         // 1. Đăng ký cái đài lắng nghe
         x.AddConsumer<ProductUpdatedConsumer>();
         // 2. Kết nối tới Bưu điện RabbitMQ

@@ -1,32 +1,29 @@
-﻿using MediatR;
-using SharedLibrary.Responses;
-using SharedLibrary.IntegrationEvents;
-using Domain.Interfaces;
+﻿using Application.Helpers;
 using Domain.Entities;
+using Domain.Interfaces;
 using Infrastructure.Data;
-using Application.Helpers;
-using Microsoft.EntityFrameworkCore;
 using MassTransit;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SharedLibrary.IntegrationEvents;
+using SharedLibrary.Responses;
 
 namespace Application.Features.Orders
 {
     public class AllocateOrderCommandHandler : IRequestHandler<AllocateOrderCommand, ApiResponse<bool>>
     {
         private readonly IWarehouseUow _uow;
-        private readonly WarehouseDbContext _dbContext;
         private readonly IPublishEndpoint _publishEndpoint;
 
-        public AllocateOrderCommandHandler(IWarehouseUow uow, WarehouseDbContext dbContext, IPublishEndpoint publishEndpoint)
+        public AllocateOrderCommandHandler(IWarehouseUow uow, IPublishEndpoint publishEndpoint)
         {
             _uow = uow;
-            _dbContext = dbContext;
             _publishEndpoint = publishEndpoint;
         }
 
         public async Task<ApiResponse<bool>> Handle(AllocateOrderCommand request, CancellationToken cancellationToken)
         {
-            await _uow.BeginTransactionAsync();
-
             try
             {
 
@@ -65,7 +62,7 @@ namespace Application.Features.Orders
                             CreatedAt = DateTime.UtcNow
                         };
 
-                        await _dbContext.StockReservations.AddAsync(reservation, cancellationToken);
+                        await _uow.Warehouse.AddReservationAsync(reservation);
                     }
 
                     if (remainingToAllocate > 0)
@@ -73,23 +70,23 @@ namespace Application.Features.Orders
                         throw new Exception($"Không đủ hàng cho sản phẩm: {item.ProductId}. Còn thiếu: {remainingToAllocate}");
                     }
                 }
+
                 await _publishEndpoint.Publish(new InventoryAllocatedEvent
-                {
-                    OrderId = request.OrderId
-                }, cancellationToken);
+                 {
+                     OrderId = request.OrderId
+                 }, cancellationToken);
 
                 // Lưu xuống DB (Entity Framework sẽ tự check RowVersion để chống tranh chấp)
-                var saved = await _uow.Warehouse.SaveChangeAsync(cancellationToken);
+                var saved = await _uow.SaveChangeAsync(cancellationToken);
+
                 if (!saved) throw new Exception("Lưu dữ liệu thất bại.");
 
-                await _uow.CommitAsync();
                 return ApiResponse<bool>.Success(true, "Đã tách đơn và giữ kho thành công!");
             }
             catch (DbUpdateConcurrencyException)
             {
                 // Bắt lỗi khi 2 khách hàng giành nhau món hàng cuối cùng
-                await _uow.RollbackAsync();
-                _dbContext.ChangeTracker.Clear();
+                _uow.ClearTracker();
 
                 // Gửi sự kiện thất bại
                 await _publishEndpoint.Publish(new InventoryAllocationFailedEvent
@@ -98,14 +95,13 @@ namespace Application.Features.Orders
                     Reason = "Hệ thống đang bận do có nhiều người cùng mua sản phẩm này cùng lúc."
                 }, cancellationToken);
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _uow.SaveChangeAsync(cancellationToken);
 
                 return ApiResponse<bool>.Failure("Hệ thống đang bận vì có nhiều người cùng mua, vui lòng thử lại!", 409);
             }
             catch (Exception ex)
-            {
-                await _uow.RollbackAsync();
-                _dbContext.ChangeTracker.Clear();
+            { 
+                _uow.ClearTracker();    
 
                 await _publishEndpoint.Publish(new InventoryAllocationFailedEvent
                 {
@@ -113,7 +109,7 @@ namespace Application.Features.Orders
                     Reason = ex.Message
                 }, cancellationToken);
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await _uow.SaveChangeAsync(cancellationToken);
 
                 return ApiResponse<bool>.Failure(ex.Message, 400);
             }

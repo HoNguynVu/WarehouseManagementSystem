@@ -33,9 +33,10 @@ namespace Application.Services
             warehouse.CreatedAt = DateTime.UtcNow;
 
             await _warehouseUow.Warehouse.AddAsync(warehouse);
-            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
+            var saved = await _warehouseUow.SaveChangeAsync();
             if (!saved)
             {
+                _warehouseUow.ClearTracker();
                 return ApiResponse<Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.", 500);
             }
             await _cache.RemoveAsync("all_warehouses");
@@ -103,9 +104,10 @@ namespace Application.Services
             _mapper.Map(warehouseDto, existingWarehouse);
             existingWarehouse.UpdatedAt = DateTime.UtcNow;
             _warehouseUow.Warehouse.Update(existingWarehouse);
-            var updated = await _warehouseUow.Warehouse.SaveChangeAsync();
+            var updated = await _warehouseUow.SaveChangeAsync();
             if (!updated)
             {
+                _warehouseUow.ClearTracker();
                 return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.", 500);
             }
             var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
@@ -129,9 +131,10 @@ namespace Application.Services
             }
 
             _warehouseUow.Warehouse.Delete(existingWarehouse);
-            var deleted = await _warehouseUow.Warehouse.SaveChangeAsync();
+            var deleted = await _warehouseUow.SaveChangeAsync();
             if (!deleted)
             {
+                _warehouseUow.ClearTracker();
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.", 500);
             }
 
@@ -184,9 +187,10 @@ namespace Application.Services
             newInventory.WarehouseId = warehouseId;
 
             existingWarehouse.Inventories.Add(newInventory);
-            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
+            var saved = await _warehouseUow.SaveChangeAsync();
             if (!saved)
             {
+                _warehouseUow.ClearTracker();
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
             }
 
@@ -223,9 +227,10 @@ namespace Application.Services
             {
                 existingWarehouse.Inventories.Remove(inventoryItem);
             }
-            var saved = await _warehouseUow.Warehouse.SaveChangeAsync();
+            var saved = await _warehouseUow.SaveChangeAsync();
             if (!saved)
             {
+                _warehouseUow.ClearTracker();
                 return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.", 500);
             }
 
@@ -238,8 +243,6 @@ namespace Application.Services
         {
             if (fromWarehouseId == dto.ToWarehouseId)
                 return ApiResponse<bool>.Failure("Kho nguồn và kho đích không được trùng nhau.", 400);
-
-            await _warehouseUow.BeginTransactionAsync();
 
             try
             {
@@ -288,7 +291,7 @@ namespace Application.Services
                     toWarehouse.Inventories.Add(newInventory);
                 }
 
-                await _warehouseUow.CommitAsync();
+                await _warehouseUow.SaveChangeAsync();
                 await _cache.RemoveAsync("all_warehouses");
                 await _cache.RemoveAsync($"warehouse_{fromWarehouseId}");
                 await _cache.RemoveAsync($"warehouse_{dto.ToWarehouseId}");
@@ -296,14 +299,13 @@ namespace Application.Services
             }
             catch (Exception ex)
             {
-                await _warehouseUow.RollbackAsync();
+                _warehouseUow.ClearTracker();
                 return ApiResponse<bool>.Failure(ex.Message);
             }
         }
 
         public async Task<ApiResponse<bool>> ConfirmStockOutAsync(string warehouseId, ConfirmStockOutDTO confirmStockOutDto)
         {
-            await _warehouseUow.BeginTransactionAsync();
             try
             {
                 var warehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(warehouseId);
@@ -326,14 +328,14 @@ namespace Application.Services
                     warehouse.Inventories.Remove(inventoryItem);
                 }
 
-                await _warehouseUow.CommitAsync();
+                await _warehouseUow.SaveChangeAsync();
                 await _cache.RemoveAsync("all_warehouses");
                 await _cache.RemoveAsync($"warehouse_{warehouseId}");
                 return ApiResponse<bool>.Success(true, "Xác nhận xuất hàng thành công!");
             }
             catch (Exception ex)
             {
-                await _warehouseUow.RollbackAsync();
+                _warehouseUow.ClearTracker();
                 return ApiResponse<bool>.Failure(ex.Message, 400);
             }
         }
