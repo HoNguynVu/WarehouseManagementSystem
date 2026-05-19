@@ -16,10 +16,6 @@ namespace Infrastructure.Repositories
         {
             await _context.Warehouses.AddAsync(warehouse);
         }
-        public async Task<bool> SaveChangeAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.SaveChangesAsync(cancellationToken) > 0;
-        }
         public async Task<IEnumerable<Warehouse>> GetAllAsync()
         {
             return await _context.Warehouses.ToListAsync();
@@ -48,6 +44,25 @@ namespace Infrastructure.Repositories
                 .Include(w => w.Inventories)
                 .Where(w => w.Inventories.Any(i => i.ProductId == productId))
                 .ToListAsync();
+        }
+        public async Task AddReservationAsync(StockReservation reservation)
+        {
+            await _context.StockReservations.AddAsync(reservation);
+        }
+        public async Task<IEnumerable<StockReservation>> GetReservationsByOrderIdAsync(string orderId)
+        {
+            return await _context.StockReservations
+                .Where(r => r.OrderId == orderId)
+                .ToListAsync();
+        }
+        public async Task<Inventory?> GetInventoryAsync(string warehouseId, string productId)
+        {
+            return await _context.Inventories
+                .FirstOrDefaultAsync(i => i.WarehouseId == warehouseId && i.ProductId == productId);
+        }
+        public void DeleteReservation(StockReservation reservation)
+        {
+            _context.StockReservations.Remove(reservation);
         }
     }
 }
