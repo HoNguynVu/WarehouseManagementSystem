@@ -13,6 +13,12 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# NguyenVu deptrai local files
+project-file-summary.md
+api-gateway-and-rabbitmq.md
+cqrs-pattern.md
+settings.local.json
+
 # ignore appsettings
 appsettings.json
 appsettings.*.json

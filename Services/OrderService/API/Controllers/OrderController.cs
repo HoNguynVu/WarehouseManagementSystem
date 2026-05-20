@@ -1,8 +1,10 @@
 using Application.DTOs;
-using Application.Interfaces;
+using Application.Features.Orders.Commands.CreateOrder;
+using Application.Features.Orders.Queries.GetAllOrders;
+using Application.Features.Orders.Queries.GetOrderById;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace API.Controllers
 {
@@ -11,27 +13,21 @@ namespace API.Controllers
     [Authorize]
     public class OrderController : ControllerBase
     {
-        private readonly IOrderService _orderService;
+        private readonly IMediator _mediator;
 
-        public OrderController(IOrderService orderService)
+        public OrderController(IMediator mediator)
         {
-            _orderService = orderService;
+            _mediator = mediator;
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateOrderDTO dto)
         {
-            //User là property có sẵn của ControllerBase — class mà OrderController kế thừa.
-            // Khi request đến, ASP.NET Core middleware JWT Bearer tự động:
-            // Đọc header Authorization: Bearer <token>
-            // Giải mã JWT token
-            // Chuyển tất cả claims trong token thành một ClaimsPrincipal
-            // Gán vào HttpContext.User
-            var accountId = User.FindFirst("accountId")?.Value; 
+            var accountId = User.FindFirst("accountId")?.Value;
             if (string.IsNullOrEmpty(accountId))
                 return Unauthorized();
 
-            var response = await _orderService.CreateOrderAsync(dto, accountId);
+            var response = await _mediator.Send(new CreateOrderCommand { Dto = dto, AccountId = accountId });
             if (!response.IsSuccess)
                 return StatusCode(response.StatusCode, response);
 
@@ -41,7 +37,7 @@ namespace API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var response = await _orderService.GetOrderByIdAsync(id);
+            var response = await _mediator.Send(new GetOrderByIdQuery { Id = id });
             if (!response.IsSuccess)
                 return StatusCode(response.StatusCode, response);
 
@@ -51,7 +47,7 @@ namespace API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var response = await _orderService.GetAllOrdersAsync();
+            var response = await _mediator.Send(new GetAllOrdersQuery());
             if (!response.IsSuccess)
                 return StatusCode(response.StatusCode, response);
 

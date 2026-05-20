@@ -1,7 +1,7 @@
 using Application.DTOs;
-using Application.Interfaces;
+using Application.Features.Payments.Commands.ProcessPaymentCallback;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace API.Controllers
 {
@@ -9,25 +9,22 @@ namespace API.Controllers
     [ApiController]
     public class PaymentController : ControllerBase
     {
-        private readonly IPaymentService _paymentService;
+        private readonly IMediator _mediator;
 
-        public PaymentController(IPaymentService paymentService)
+        public PaymentController(IMediator mediator)
         {
-            _paymentService = paymentService;
+            _mediator = mediator;
         }
 
         [HttpPost("callback")]
         public async Task<IActionResult> Callback([FromBody] ZaloPayCallbackDTO cbdata)
         {
-            var result = await _paymentService.ProcessCallback(cbdata);
-            
+            var result = await _mediator.Send(new ProcessPaymentCallbackCommand { Cbdata = cbdata });
+
             if (result)
-            {
                 return Ok(new { return_code = 1, return_message = "success" });
-            }
-            
-            // If failed due to MAC or other issues, still return 200 with fail code to ZaloPay
-            // so they won't retry excessively if it's an unrecoverable logic error (like invalid MAC).
+
+            // Still return 200 with fail code so ZaloPay won't retry unrecoverable errors (e.g. invalid MAC)
             return Ok(new { return_code = 0, return_message = "fail" });
         }
     }

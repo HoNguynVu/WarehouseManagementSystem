@@ -5,27 +5,24 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.UnitOfWorks;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedLibrary.Responses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Application.Services
+namespace Application.Features.Orders.Commands.CreateOrder
 {
-    public class OrderService : IOrderService
+    public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, ApiResponse<OrderDTO>>
     {
         private readonly IOrderUow _uow;
         private readonly IPaymentService _paymentService;
         private readonly IMapper _mapper;
-        private readonly ILogger<OrderService> _logger;
+        private readonly ILogger<CreateOrderCommandHandler> _logger;
 
-        public OrderService(
+        public CreateOrderCommandHandler(
             IOrderUow uow,
             IPaymentService paymentService,
             IMapper mapper,
-            ILogger<OrderService> logger)
+            ILogger<CreateOrderCommandHandler> logger)
         {
             _uow = uow;
             _paymentService = paymentService;
@@ -33,10 +30,12 @@ namespace Application.Services
             _logger = logger;
         }
 
-        public async Task<ApiResponse<OrderDTO>> CreateOrderAsync(CreateOrderDTO dto, string accountId)
+        public async Task<ApiResponse<OrderDTO>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
         {
             try
             {
+                var dto = request.Dto;
+
                 if (dto.Items == null || !dto.Items.Any())
                     return ApiResponse<OrderDTO>.Failure("Order must have at least one item", 400);
 
@@ -45,7 +44,7 @@ namespace Application.Services
                 var order = new Order
                 {
                     Id = IdGenerator.GenerateId(PaymentConstants.PrefixOrder),
-                    AccountId = accountId,
+                    AccountId = request.AccountId,
                     PaymentMethod = dto.PaymentMethod,
                     Status = PaymentConstants.StatusPending,
                     CreatedAt = DateTimeOffset.UtcNow,
@@ -70,7 +69,7 @@ namespace Application.Services
 
                 await _uow.CommitAsync();
 
-                // CreateOrderEvent is published only after payment is confirmed (in PaymentService.ProcessCallback)
+                // CreateOrderEvent is published only after payment is confirmed (in ProcessPaymentCallbackCommandHandler)
                 PaymentLinkDTO? paymentInfo = null;
                 if (dto.PaymentMethod == PaymentConstants.MethodZaloPay)
                 {
@@ -90,43 +89,6 @@ namespace Application.Services
                     await _uow.RollbackAsync();
                 _logger.LogError(ex, "Error creating order");
                 return ApiResponse<OrderDTO>.Failure($"System error: {ex.Message}", 500);
-            }
-        }
-
-        public async Task<ApiResponse<OrderDTO>> GetOrderByIdAsync(string id)
-        {
-            try
-            {
-                var order = await _uow.Orders.GetByIdAsync(id);
-                if (order == null)
-                    return ApiResponse<OrderDTO>.Failure($"Order with ID {id} not found", 404);
-
-                var orderItems = await _uow.OrderItems.GetByOrderId(id);
-                
-                var dto = _mapper.Map<OrderDTO>(order);
-                dto.OrderItems = _mapper.Map<List<OrderItemDTO>>(orderItems);
-
-                return ApiResponse<OrderDTO>.Success(dto, "Order retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving order {Id}", id);
-                return ApiResponse<OrderDTO>.Failure($"System error: {ex.Message}", 500);
-            }
-        }
-
-        public async Task<ApiResponse<IEnumerable<OrderDTO>>> GetAllOrdersAsync()
-        {
-            try
-            {
-                var orders = await _uow.Orders.GetAllAsync();
-                var dtos = _mapper.Map<IEnumerable<OrderDTO>>(orders);
-                return ApiResponse<IEnumerable<OrderDTO>>.Success(dtos, "Orders retrieved successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving orders");
-                return ApiResponse<IEnumerable<OrderDTO>>.Failure($"System error: {ex.Message}", 500);
             }
         }
     }

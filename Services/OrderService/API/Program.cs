@@ -1,3 +1,4 @@
+using Application.Features.Orders.Commands.CreateOrder;
 using Application.Interfaces;
 using Application.Services;
 using Application.Settings;
@@ -87,9 +88,11 @@ try
     builder.Services.Configure<ZaloPaySettings>(builder.Configuration.GetSection("ZaloPaySettings"));
     builder.Services.AddHttpClient();
 
+    // MediatR
+    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application")));
+
     // DI
     builder.Services.AddScoped<IOrderUow, UnitOfWorks>();
-    builder.Services.AddScoped<IOrderService, OrderService>();
     builder.Services.AddScoped<IPaymentService, PaymentService>();
 
     var app = builder.Build();
