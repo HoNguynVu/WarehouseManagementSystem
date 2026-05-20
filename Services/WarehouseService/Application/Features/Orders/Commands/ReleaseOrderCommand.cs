@@ -1,7 +1,7 @@
-﻿using MediatR;
+using MediatR;
 using SharedLibrary.Responses;
 
-namespace Application.Features.Orders
+namespace Application.Features.Orders.Commands
 {
     public class ReleaseOrderCommand : IRequest<ApiResponse<bool>>
     {

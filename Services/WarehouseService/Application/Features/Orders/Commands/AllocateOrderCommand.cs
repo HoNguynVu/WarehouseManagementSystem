@@ -1,8 +1,8 @@
-﻿using MediatR;
+using MediatR;
 using SharedLibrary.Responses;
 using System.Collections.Generic;
 
-namespace Application.Features.Orders
+namespace Application.Features.Orders.Commands
 {
     // Dữ liệu đầu vào: Cần OrderId và danh sách món hàng
     public class AllocateOrderCommand : IRequest<ApiResponse<bool>>

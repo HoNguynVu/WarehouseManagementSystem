@@ -1,4 +1,4 @@
-﻿using Application.Helpers;
+using Application.Helpers;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using SharedLibrary.IntegrationEvents;
 using SharedLibrary.Responses;
 
-namespace Application.Features.Orders
+namespace Application.Features.Orders.Commands
 {
     public class AllocateOrderCommandHandler : IRequestHandler<AllocateOrderCommand, ApiResponse<bool>>
     {
@@ -76,7 +76,7 @@ namespace Application.Features.Orders
                      OrderId = request.OrderId
                  }, cancellationToken);
 
-                // Lưu xuống DB (Entity Framework sẽ tự check RowVersion để chống tranh chấp)
+                // Lưu xuống DB (Entity Framework sẽ tự check xmin concurrency token để chống tranh chấp)
                 var saved = await _uow.SaveChangeAsync(cancellationToken);
 
                 if (!saved) throw new Exception("Lưu dữ liệu thất bại.");

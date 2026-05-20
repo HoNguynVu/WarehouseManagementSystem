@@ -1,9 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+using MediatR;
+using SharedLibrary.Responses;
 
-namespace Application.DTOs
+using System.ComponentModel.DataAnnotations;
+
+namespace Application.Features.Inventories.Commands.AddInventory
 {
-    public class AddInventoryDTO
+    public class AddInventoryCommand : IRequest<ApiResponse<bool>>
     {
+        public string WarehouseId { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Mã sản phẩm không được để trống")]
         public string ProductId { get; set; } = string.Empty;
 
