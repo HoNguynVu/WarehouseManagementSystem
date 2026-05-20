@@ -1,6 +1,4 @@
 using API.Consumers;
-using Application.Interfaces;
-using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
@@ -13,7 +11,6 @@ using System.Text;
 using SharedLibrary.Responses;
 using MassTransit;
 using Serilog;
-using Infrastructure.Data;
 using SharedLibrary.IntegrationEvents;
 using System.Reflection;
 
@@ -154,7 +151,6 @@ try
     });
 
     builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
-    builder.Services.AddScoped<IWarehouseService, WarehouseService>();
     builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
     builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application")));
 

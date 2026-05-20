@@ -1,8 +1,8 @@
-﻿using SharedLibrary.Seedwork;
+using SharedLibrary.Seedwork;
 
 namespace Domain.Interfaces
 {
-    public interface IWarehouseUow
+    public interface IWarehouseUow : ITransactionManager
     {
         IWarehouseRepository Warehouse { get; }
         Task<bool> SaveChangeAsync(CancellationToken cancellationToken = default);

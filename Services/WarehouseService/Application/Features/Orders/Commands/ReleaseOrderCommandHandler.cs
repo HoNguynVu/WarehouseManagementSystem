@@ -1,10 +1,10 @@
-﻿using MediatR;
+using MediatR;
 using SharedLibrary.Responses;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Features.Orders
+namespace Application.Features.Orders.Commands
 {
     public class ReleaseOrderCommandHandler : IRequestHandler<ReleaseOrderCommand, ApiResponse<bool>>
     {
