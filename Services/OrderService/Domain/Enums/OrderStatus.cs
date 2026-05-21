@@ -12,6 +12,7 @@ namespace Domain.Enums
         public const string AwaitingPayment = "AwaitingPayment";
         public const string Paid = "Paid";
         public const string Completed = "Completed";
+        public const string Failed = "Failed";
         public const string Cancelled = "Cancelled";
     }
 }
