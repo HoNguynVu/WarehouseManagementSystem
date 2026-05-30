@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace SharedLibrary.Seedwork
 {
@@ -15,6 +16,7 @@ namespace SharedLibrary.Seedwork
         private readonly List<IDomainEvent> _domainEvents = new();
 
         [NotMapped]
+        [JsonIgnore]
         public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
         public void AddDomainEvent(IDomainEvent domainEvent)
