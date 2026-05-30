@@ -2,6 +2,7 @@ using MediatR;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
 using Microsoft.Extensions.Caching.Distributed;
+using SharedLibrary.Exceptions;
 
 namespace Application.Features.Inventories.Commands.DirectStockOut
 {
@@ -21,22 +22,21 @@ namespace Application.Features.Inventories.Commands.DirectStockOut
             var existingWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(request.WarehouseId);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {request.WarehouseId}", 404);
+                throw new NotFoundException($"Không tìm thấy kho hàng với ID: {request.WarehouseId}");
             }
             var inventoryItem = existingWarehouse.Inventories.FirstOrDefault(i => i.ProductId == request.ProductId);
             
             if (inventoryItem == null)
-                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {request.ProductId} trong kho hàng.", 404);
+                throw new NotFoundException($"Không tìm thấy sản phẩm với mã: {request.ProductId} trong kho hàng.");
 
             int availableQuantity = inventoryItem.Quantity - inventoryItem.ReservedQuantity;
 
             if (availableQuantity < request.Quantity)
             {
-                return ApiResponse<bool>.Failure($"Không đủ hàng để xuất! Trong kho chỉ có thể xuất tối đa {availableQuantity} sản phẩm.", 400);
+                throw new BadRequestException($"Không đủ hàng để xuất! Trong kho chỉ có thể xuất tối đa {availableQuantity} sản phẩm.");
             }
             
             inventoryItem.Quantity -= request.Quantity;
-            inventoryItem.UpdatedAt = DateTime.UtcNow;
             
             if (inventoryItem.Quantity == 0)
             {
@@ -46,7 +46,7 @@ namespace Application.Features.Inventories.Commands.DirectStockOut
             if (!saved)
             {
                 _warehouseUow.ClearTracker();
-                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xuất hàng từ kho.", 500);
+                throw new BadRequestException("Lỗi hệ thống khi xuất hàng từ kho.");
             }
 
             await _cache.RemoveAsync("all_warehouses", cancellationToken);

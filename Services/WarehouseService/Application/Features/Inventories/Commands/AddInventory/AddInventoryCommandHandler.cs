@@ -8,6 +8,8 @@ using Application.Helpers;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 using System.Net.Http;
+using SharedLibrary.Exceptions;
+using Domain.Events;
 
 namespace Application.Features.Inventories.Commands.AddInventory
 {
@@ -31,21 +33,21 @@ namespace Application.Features.Inventories.Commands.AddInventory
             var existingWarehouse = await _warehouseUow.Warehouse.GetWarehouseWithInventoriesAsync(request.WarehouseId);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {request.WarehouseId}", 404);
+                throw new NotFoundException($"Không tìm thấy kho hàng với ID: {request.WarehouseId}");
             }
             var currentUsedCapacity = existingWarehouse.Inventories.Sum(i => i.Quantity);
 
             if (currentUsedCapacity + request.Quantity > existingWarehouse.Capacity)
             {
                 var remaining = existingWarehouse.Capacity - currentUsedCapacity;
-                return ApiResponse<bool>.Failure($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}", 400);
+                throw new BadRequestException($"Kho đã đầy! Sức chứa còn lại chỉ là: {remaining}");
             }
 
             var client = _httpClientFactory.CreateClient("CatalogClient");
             var response = await client.GetAsync($"/api/Product/{request.ProductId}", cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy sản phẩm với mã: {request.ProductId} trong hệ thống.", 400);
+                throw new BadRequestException($"Không tìm thấy sản phẩm với mã: {request.ProductId} trong hệ thống.");
             }
 
             var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -57,7 +59,7 @@ namespace Application.Features.Inventories.Commands.AddInventory
             var catalogResult = JsonSerializer.Deserialize<ApiResponse<CatalogProductDTO>>(responseString, jsonOptions);
             if (catalogResult == null || !catalogResult.IsSuccess || catalogResult.Data == null)
             {
-                return ApiResponse<bool>.Failure("Lỗi khi đọc dữ liệu từ Catalog Service.", 500);
+                throw new BadRequestException("Lỗi khi đọc dữ liệu từ Catalog Service.");
             }
 
             string productId = catalogResult.Data.Id;
@@ -67,15 +69,17 @@ namespace Application.Features.Inventories.Commands.AddInventory
             newInventory.Id = IdGenerator.GenerateId(ClassPrefix.Inventory);
             newInventory.ProductName = productName;
             newInventory.ProductId = productId;
-            newInventory.CreatedAt = DateTime.UtcNow;
             newInventory.WarehouseId = request.WarehouseId;
+
+            // Đăng ký Domain Event
+            newInventory.AddDomainEvent(new InventoryAddedEvent(productId, request.WarehouseId, request.Quantity));
 
             existingWarehouse.Inventories.Add(newInventory);
             var saved = await _warehouseUow.SaveChangeAsync(cancellationToken);
             if (!saved)
             {
                 _warehouseUow.ClearTracker();
-                return ApiResponse<bool>.Failure("Lỗi hệ thống khi thêm hàng vào kho.");
+                throw new BadRequestException("Lỗi hệ thống khi thêm hàng vào kho.");
             }
 
             await _cache.RemoveAsync("all_warehouses", cancellationToken);

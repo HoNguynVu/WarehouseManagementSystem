@@ -13,6 +13,9 @@ using MassTransit;
 using Serilog;
 using SharedLibrary.IntegrationEvents;
 using System.Reflection;
+using FluentValidation;
+using SharedLibrary.Middlewares;
+using Infrastructure.Data.Interceptors;
 
 //Add Serilog configuration
 Log.Logger = new LoggerConfiguration()
@@ -106,8 +109,18 @@ try
         };
     });
 
-    builder.Services.AddDbContext<WarehouseDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb")));
+    builder.Services.AddScoped<AuditableEntityInterceptor>();
+    builder.Services.AddScoped<DispatchDomainEventsInterceptor>();
+
+    builder.Services.AddDbContext<WarehouseDbContext>((sp, options) =>
+    {
+        options.UseNpgsql(builder.Configuration.GetConnectionString("WarehouseDb"))
+               .AddInterceptors(
+                   sp.GetRequiredService<AuditableEntityInterceptor>(),
+                   sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+    });
+
+    builder.Services.AddValidatorsFromAssembly(AppDomain.CurrentDomain.Load("Application"));
 
     builder.Services.AddAutoMapper(config =>
     {
@@ -152,7 +165,12 @@ try
 
     builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
     builder.Services.AddScoped<IWarehouseUow, WarehouseUow>();
-    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application")));
+    builder.Services.AddMediatR(cfg =>
+    {
+        cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application"));
+        cfg.AddOpenBehavior(typeof(Application.Behaviors.LoggingBehavior<,>));
+        cfg.AddOpenBehavior(typeof(Application.Behaviors.ValidationBehavior<,>));
+    });
 
     var app = builder.Build();
 
@@ -162,6 +180,8 @@ try
         var dbContext = scope.ServiceProvider.GetRequiredService<WarehouseDbContext>();
         dbContext.Database.Migrate();
     }
+
+    app.UseGlobalException();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
@@ -173,8 +193,6 @@ try
     app.UseHttpsRedirection();
 
     app.UseAuthentication();
-    app.UseAuthorization();
-
     app.UseAuthorization();
 
     app.MapControllers();

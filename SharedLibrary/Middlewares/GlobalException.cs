@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using SharedLibrary.Exceptions;
+using SharedLibrary.Responses;
 
 namespace SharedLibrary.Middlewares
 {
@@ -33,41 +34,78 @@ namespace SharedLibrary.Middlewares
         private async Task HandleUnsuccessfulStatusCodeAsync(HttpContext context)
         {
             var statusCode = context.Response.StatusCode;
-            var (title, message) = statusCode switch
+            var message = statusCode switch
             {
-                StatusCodes.Status401Unauthorized => ("Unauthorized", "You are not authorized to access."),
-                StatusCodes.Status403Forbidden => ("Forbidden", "You do not have permission to access this resource."),
-                StatusCodes.Status429TooManyRequests => ("Too Many Requests", "Too many requests. Please slow down."),
-                _ => ("Error", "Unexpected error.")
+                StatusCodes.Status401Unauthorized => "You are not authorized to access.",
+                StatusCodes.Status403Forbidden => "You do not have permission to access this resource.",
+                StatusCodes.Status429TooManyRequests => "Too many requests. Please slow down.",
+                _ => "Unexpected error."
             };
 
-            await ModifyHeaders(context, message, statusCode, title);
+            await ModifyHeaders(context, message, statusCode);
         }
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var message = "An unexpected error occurred. Please try again later.";
-            var title = "Internal Server Error";
-            if(ex is TimeoutException || ex is TaskCanceledException)
+            List<string>? errors = null;
+
+            if (ex is CustomException customEx)
+            {
+                statusCode = customEx.StatusCode;
+                message = customEx.Message;
+            }
+            else if (ex is TimeoutException || ex is TaskCanceledException)
             {
                 statusCode = (int)HttpStatusCode.RequestTimeout;
                 message = "The request timed out. Please try again later.";
-                title = "Request Timeout";
-            }    
-            await ModifyHeaders(context, message, statusCode, title);
+            }
+            else if (ex.GetType().Name == "DbUpdateConcurrencyException")
+            {
+                statusCode = (int)HttpStatusCode.Conflict;
+                message = "Dữ liệu đã bị thay đổi bởi người dùng khác. Vui lòng tải lại trang và thử lại.";
+            }
+            else if (ex.GetType().Name == "ValidationException")
+            {
+                statusCode = (int)HttpStatusCode.BadRequest;
+                message = "Dữ liệu không hợp lệ";
+
+                // Reflection to extract FluentValidation errors without project reference
+                var errorsProp = ex.GetType().GetProperty("Errors");
+                if (errorsProp != null)
+                {
+                    var errorsVal = errorsProp.GetValue(ex) as System.Collections.IEnumerable;
+                    if (errorsVal != null)
+                    {
+                        errors = new List<string>();
+                        foreach (var err in errorsVal)
+                        {
+                            var errMsgProp = err.GetType().GetProperty("ErrorMessage");
+                            if (errMsgProp != null)
+                            {
+                                var errMsg = errMsgProp.GetValue(err) as string;
+                                if (errMsg != null) errors.Add(errMsg);
+                            }
+                        }
+                    }
+                }
+            }
+
+            await ModifyHeaders(context, message, statusCode, errors);
         }
 
-        private async Task ModifyHeaders(HttpContext context, string message, int statusCode, string title)
+        private async Task ModifyHeaders(HttpContext context, string message, int statusCode, List<string>? errors = null)
         {
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = statusCode;
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+
+            var response = ApiResponse<object>.Failure(message, statusCode, errors);
+
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
-                StatusCode = statusCode,
-                Title = title,
-                Message = message
-            }), CancellationToken.None);
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }), System.Threading.CancellationToken.None);
         }
     }
 }

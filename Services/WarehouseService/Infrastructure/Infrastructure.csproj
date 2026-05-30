@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.2.4" />
+    <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.25">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

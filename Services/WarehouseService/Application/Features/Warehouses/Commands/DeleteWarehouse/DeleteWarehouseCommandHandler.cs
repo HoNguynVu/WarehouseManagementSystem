@@ -2,6 +2,7 @@ using MediatR;
 using Domain.Interfaces;
 using SharedLibrary.Responses;
 using Microsoft.Extensions.Caching.Distributed;
+using SharedLibrary.Exceptions;
 
 namespace Application.Features.Warehouses.Commands.DeleteWarehouse
 {
@@ -21,12 +22,12 @@ namespace Application.Features.Warehouses.Commands.DeleteWarehouse
             var existingWarehouse = await _warehouseUow.Warehouse.GetByIdAsync(request.Id);
             if (existingWarehouse == null)
             {
-                return ApiResponse<bool>.Failure($"Không tìm thấy kho hàng với ID: {request.Id}", 404);
+                throw new NotFoundException($"Không tìm thấy kho hàng với ID: {request.Id}");
             }
 
             if (existingWarehouse.Inventories != null && existingWarehouse.Inventories.Any())
             {
-                return ApiResponse<bool>.Failure("Không thể xóa kho hàng vì còn tồn kho bên trong. Vui lòng xuất hết hàng trước khi xóa.", 400);
+                throw new BadRequestException("Không thể xóa kho hàng vì còn tồn kho bên trong. Vui lòng xuất hết hàng trước khi xóa.");
             }
 
             _warehouseUow.Warehouse.Delete(existingWarehouse);
@@ -34,7 +35,7 @@ namespace Application.Features.Warehouses.Commands.DeleteWarehouse
             if (!deleted)
             {
                 _warehouseUow.ClearTracker();
-                return ApiResponse<bool>.Failure("Lỗi hệ thống khi xóa kho hàng.", 500);
+                throw new BadRequestException("Lỗi hệ thống khi xóa kho hàng.");
             }
 
             await _cache.RemoveAsync("all_warehouses", cancellationToken);

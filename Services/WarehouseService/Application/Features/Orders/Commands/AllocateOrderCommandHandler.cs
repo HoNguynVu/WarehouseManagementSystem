@@ -8,6 +8,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SharedLibrary.IntegrationEvents;
 using SharedLibrary.Responses;
+using SharedLibrary.Exceptions;
+using Domain.Events;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Features.Orders.Commands
 {
@@ -26,22 +32,18 @@ namespace Application.Features.Orders.Commands
         {
             try
             {
-
                 foreach (var item in request.Items)
                 {
                     int remainingToAllocate = item.RequiredQuantity;
 
-                    // Lấy danh sách các kho có sản phẩm này, kèm tồn kho hiện tại
                     var warehouses = await _uow.Warehouse.GetWarehousesContainingProductAsync(item.ProductId);
 
-                    // Gom tồn kho của sản phẩm này ở tất cả các kho, ưu tiên kho nhiều hàng nhất
                     var inventoriesToUse = warehouses
                         .SelectMany(w => w.Inventories)
                         .Where(i => i.ProductId == item.ProductId && (i.Quantity - i.ReservedQuantity) > 0)
                         .OrderByDescending(i => i.Quantity - i.ReservedQuantity)
                         .ToList();
 
-                    // Thuật toán băm nhỏ số lượng chia cho các kho
                     foreach (var inv in inventoriesToUse)
                     {
                         if (remainingToAllocate <= 0) break;
@@ -49,7 +51,7 @@ namespace Application.Features.Orders.Commands
                         int available = inv.Quantity - inv.ReservedQuantity;
                         int takeQty = Math.Min(available, remainingToAllocate);
 
-                        inv.ReservedQuantity += takeQty; // Giữ kho
+                        inv.ReservedQuantity += takeQty;
                         remainingToAllocate -= takeQty;
 
                         var reservation = new StockReservation
@@ -58,37 +60,36 @@ namespace Application.Features.Orders.Commands
                             OrderId = request.OrderId,
                             ProductId = item.ProductId,
                             WarehouseId = inv.WarehouseId,
-                            Quantity = takeQty,
-                            CreatedAt = DateTime.UtcNow
+                            Quantity = takeQty
                         };
+
+                        // Đăng ký Domain Event
+                        reservation.AddDomainEvent(new StockReservedEvent(request.OrderId, item.ProductId, inv.WarehouseId, takeQty));
 
                         await _uow.Warehouse.AddReservationAsync(reservation);
                     }
 
                     if (remainingToAllocate > 0)
                     {
-                        throw new Exception($"Không đủ hàng cho sản phẩm: {item.ProductId}. Còn thiếu: {remainingToAllocate}");
+                        throw new BadRequestException($"Không đủ hàng cho sản phẩm: {item.ProductId}. Còn thiếu: {remainingToAllocate}");
                     }
                 }
 
                 await _publishEndpoint.Publish(new InventoryAllocatedEvent
-                 {
-                     OrderId = request.OrderId
-                 }, cancellationToken);
+                {
+                    OrderId = request.OrderId
+                }, cancellationToken);
 
-                // Lưu xuống DB (Entity Framework sẽ tự check xmin concurrency token để chống tranh chấp)
                 var saved = await _uow.SaveChangeAsync(cancellationToken);
 
-                if (!saved) throw new Exception("Lưu dữ liệu thất bại.");
+                if (!saved) throw new BadRequestException("Lưu dữ liệu thất bại.");
 
                 return ApiResponse<bool>.Success(true, "Đã tách đơn và giữ kho thành công!");
             }
             catch (DbUpdateConcurrencyException)
             {
-                // Bắt lỗi khi 2 khách hàng giành nhau món hàng cuối cùng
                 _uow.ClearTracker();
 
-                // Gửi sự kiện thất bại
                 await _publishEndpoint.Publish(new InventoryAllocationFailedEvent
                 {
                     OrderId = request.OrderId,
@@ -97,9 +98,9 @@ namespace Application.Features.Orders.Commands
 
                 await _uow.SaveChangeAsync(cancellationToken);
 
-                return ApiResponse<bool>.Failure("Hệ thống đang bận vì có nhiều người cùng mua, vui lòng thử lại!", 409);
+                throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not BadRequestException)
             { 
                 _uow.ClearTracker();    
 
@@ -111,7 +112,7 @@ namespace Application.Features.Orders.Commands
 
                 await _uow.SaveChangeAsync(cancellationToken);
 
-                return ApiResponse<bool>.Failure(ex.Message, 400);
+                throw new BadRequestException(ex.Message);
             }
         }
     }
