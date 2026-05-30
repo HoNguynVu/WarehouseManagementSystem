@@ -32,130 +32,72 @@ namespace API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateWarehouseCommand command)
         {
-            var response = await _mediator.Send(command);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var response = await _mediator.Send(new GetAllWarehousesQuery());
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(new GetAllWarehousesQuery()));
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
-            var response = await _mediator.Send(new GetWarehouseByIdQuery(id));
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(new GetWarehouseByIdQuery(id)));
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] UpdateWarehouseCommand command)
         {
             command.Id = id;
-            var response = await _mediator.Send(command);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            var response = await _mediator.Send(new DeleteWarehouseCommand(id));
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(new DeleteWarehouseCommand(id)));
         }
 
         [HttpPost("{warehouseId}/inventory")]
         public async Task<IActionResult> AddInventory(string warehouseId, [FromBody] AddInventoryCommand command)
         {
             command.WarehouseId = warehouseId;
-            var response = await _mediator.Send(command);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpPost("{warehouseId}/stock-out")]
         public async Task<IActionResult> DirectStockOut(string warehouseId, [FromBody] DirectStockOutCommand command)
         {
             command.WarehouseId = warehouseId;
-            var response = await _mediator.Send(command);
-
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpPost("{warehouseId}/transfer")]
         public async Task<IActionResult> TransferInventory(string warehouseId, [FromBody] TransferInventoryCommand command)
         {
             command.FromWarehouseId = warehouseId;
-            var response = await _mediator.Send(command);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpPost("{warehouseId}/confirm-out")]
         public async Task<IActionResult> ConfirmStockOut(string warehouseId, [FromBody] ConfirmStockOutCommand command)
         {
             command.WarehouseId = warehouseId;
-            var response = await _mediator.Send(command);
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpPost("allocate-order")]
         public async Task<IActionResult> AllocateOrder([FromBody] AllocateOrderCommand command)
         {
-            var response = await _mediator.Send(command);
-
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command));
         }
 
         [HttpPost("release-order")]
         public async Task<IActionResult> ReleaseOrder([FromBody] ReleaseOrderCommand command, CancellationToken cancellationToken)
         {
-            var response = await _mediator.Send(command, cancellationToken);
-
-            if (!response.IsSuccess)
-            {
-                return StatusCode(response.StatusCode, response);
-            }
-            return Ok(response);
+            return Ok(await _mediator.Send(command, cancellationToken));
         }
     }
 }

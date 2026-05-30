@@ -5,6 +5,7 @@ using Domain.Interfaces;
 using SharedLibrary.Responses;
 using Application.Helpers;
 using Microsoft.Extensions.Caching.Distributed;
+using SharedLibrary.Exceptions;
 
 namespace Application.Features.Warehouses.Commands.CreateWarehouse
 {
@@ -26,14 +27,13 @@ namespace Application.Features.Warehouses.Commands.CreateWarehouse
             var warehouse = _mapper.Map<Warehouse>(request);
             
             warehouse.Id = IdGenerator.GenerateId(ClassPrefix.Warehouse);
-            warehouse.CreatedAt = DateTime.UtcNow;
 
             await _warehouseUow.Warehouse.AddAsync(warehouse);
             var saved = await _warehouseUow.SaveChangeAsync(cancellationToken);
             if (!saved)
             {
                 _warehouseUow.ClearTracker();
-                return ApiResponse<Warehouse>.Failure("Lỗi hệ thống khi tạo kho hàng.", 500);
+                throw new BadRequestException("Lỗi hệ thống khi tạo kho hàng.");
             }
             await _cache.RemoveAsync("all_warehouses", cancellationToken);
             return ApiResponse<Warehouse>.Success(warehouse, "Tạo kho hàng thành công.", 201);

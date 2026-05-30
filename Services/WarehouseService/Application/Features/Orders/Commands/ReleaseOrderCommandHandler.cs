@@ -3,6 +3,11 @@ using SharedLibrary.Responses;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using SharedLibrary.Exceptions;
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Features.Orders.Commands
 {
@@ -17,44 +22,41 @@ namespace Application.Features.Orders.Commands
 
         public async Task<ApiResponse<bool>> Handle(ReleaseOrderCommand request, CancellationToken cancellationToken)
         {
-            try
+            // 1. Tìm TẤT CẢ biên lai thuộc về Đơn hàng này
+            var reservations = await _uow.Warehouse.GetReservationsByOrderIdAsync(request.OrderId);
+
+            // Nếu không có biên lai nào, coi như đã hủy hoặc đơn không tồn tại (Idempotent)
+            if (!reservations.Any())
             {
-                // 1. Tìm TẤT CẢ biên lai thuộc về Đơn hàng này
-                var reservations = await _uow.Warehouse.GetReservationsByOrderIdAsync(request.OrderId);
-
-                // Nếu không có biên lai nào, coi như đã hủy hoặc đơn không tồn tại (Idempotent)
-                if (!reservations.Any())
-                {
-                    return ApiResponse<bool>.Success(true, "Không tìm thấy dữ liệu giữ kho cho đơn hàng này (Có thể đã được nhả trước đó).");
-                }
-
-                // 2. Duyệt qua từng tờ biên lai để trả hàng lại đúng kho
-                foreach (var res in reservations)
-                {
-                    // Lôi đúng cái kho và đúng cái sản phẩm trong tờ biên lai ra
-                    var inventory = await _uow.Warehouse.GetInventoryAsync(res.WarehouseId, res.ProductId);
-
-                    if (inventory != null)
-                    {
-                        // Trả lại số lượng đã giữ
-                        inventory.ReservedQuantity -= res.Quantity;
-
-                        // Đảm bảo không bao giờ bị âm (phòng hờ lỗi data cũ)
-                        if (inventory.ReservedQuantity < 0) inventory.ReservedQuantity = 0;
-                    }
-                    _uow.Warehouse.DeleteReservation(res);
-                }
-
-                // 4. Lưu thay đổi và chốt Transaction
-                await _uow.SaveChangeAsync(cancellationToken);
-
-                return ApiResponse<bool>.Success(true, $"Đã hủy đơn {request.OrderId} và hoàn trả tồn kho thành công!");
+                return ApiResponse<bool>.Success(true, "Không tìm thấy dữ liệu giữ kho cho đơn hàng này (Có thể đã được nhả trước đó).");
             }
-            catch (Exception ex)
+
+            // 2. Duyệt qua từng tờ biên lai để trả hàng lại đúng kho
+            foreach (var res in reservations)
+            {
+                // Lôi đúng cái kho và đúng cái sản phẩm trong tờ biên lai ra
+                var inventory = await _uow.Warehouse.GetInventoryAsync(res.WarehouseId, res.ProductId);
+
+                if (inventory != null)
+                {
+                    // Trả lại số lượng đã giữ
+                    inventory.ReservedQuantity -= res.Quantity;
+
+                    // Đảm bảo không bao giờ bị âm (phòng hờ lỗi data cũ)
+                    if (inventory.ReservedQuantity < 0) inventory.ReservedQuantity = 0;
+                }
+                _uow.Warehouse.DeleteReservation(res);
+            }
+
+            // 4. Lưu thay đổi và chốt Transaction
+            var saved = await _uow.SaveChangeAsync(cancellationToken);
+            if (!saved)
             {
                 _uow.ClearTracker();
-                return ApiResponse<bool>.Failure(ex.Message, 500);
+                throw new BadRequestException("Lỗi hệ thống khi hoàn trả tồn kho.");
             }
+
+            return ApiResponse<bool>.Success(true, $"Đã hủy đơn {request.OrderId} và hoàn trả tồn kho thành công!");
         }
     }
 }

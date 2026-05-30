@@ -4,6 +4,7 @@ using Domain.Interfaces;
 using SharedLibrary.Responses;
 using Application.DTOs;
 using Microsoft.Extensions.Caching.Distributed;
+using SharedLibrary.Exceptions;
 
 namespace Application.Features.Warehouses.Commands.UpdateWarehouse
 {
@@ -25,18 +26,17 @@ namespace Application.Features.Warehouses.Commands.UpdateWarehouse
             var existingWarehouse = await _warehouseUow.Warehouse.GetByIdAsync(request.Id);
             if (existingWarehouse == null)
             {
-                return ApiResponse<WarehouseDTO>.Failure($"Không tìm thấy kho hàng với ID: {request.Id}", 404);
+                throw new NotFoundException($"Không tìm thấy kho hàng với ID: {request.Id}");
             }
             
             _mapper.Map(request, existingWarehouse);
-            existingWarehouse.UpdatedAt = DateTime.UtcNow;
             _warehouseUow.Warehouse.Update(existingWarehouse);
             
             var updated = await _warehouseUow.SaveChangeAsync(cancellationToken);
             if (!updated)
             {
                 _warehouseUow.ClearTracker();
-                return ApiResponse<WarehouseDTO>.Failure("Lỗi hệ thống khi cập nhật kho hàng.", 500);
+                throw new BadRequestException("Lỗi hệ thống khi cập nhật kho hàng.");
             }
             
             var dto = _mapper.Map<WarehouseDTO>(existingWarehouse);
