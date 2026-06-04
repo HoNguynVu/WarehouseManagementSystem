@@ -142,6 +142,8 @@ try
 
         // 1. Đăng ký cái đài lắng nghe
         x.AddConsumer<ProductUpdatedConsumer>();
+        x.AddConsumer<AllocateOrderConsumer>();
+        x.AddConsumer<ReleaseOrderStockConsumer>();
         // 2. Kết nối tới Bưu điện RabbitMQ
         x.UsingRabbitMq((context, cfg) =>
         {

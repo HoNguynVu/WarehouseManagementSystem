@@ -30,9 +30,23 @@ namespace Application.Features.Orders.Queries.GetOrderById
                     return ApiResponse<OrderDTO>.Failure($"Order with ID {request.Id} not found", 404);
 
                 var orderItems = await _uow.OrderItems.GetByOrderId(request.Id);
+                
+                // Lấy thêm thông tin Payment
+                var payment = await _uow.Payments.GetByOrderIdAsync(request.Id);
 
                 var dto = _mapper.Map<OrderDTO>(order);
                 dto.OrderItems = _mapper.Map<List<OrderItemDTO>>(orderItems);
+                
+                if (payment != null)
+                {
+                    dto.PaymentInfo = new PaymentLinkDTO
+                    {
+                        IsSuccess = payment.Status == "Completed" || payment.Status == "Paid",
+                        PaymentId = payment.TransactionId,
+                        PaymentUrl = "", // Url chỉ có lúc mới tạo
+                        Message = $"Payment Status: {payment.Status}"
+                    };
+                }
 
                 return ApiResponse<OrderDTO>.Success(dto, "Order retrieved successfully");
             }

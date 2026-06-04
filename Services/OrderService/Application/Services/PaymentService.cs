@@ -39,7 +39,7 @@ namespace Application.Services
             if (string.IsNullOrEmpty(orderId))
                 return (400, new PaymentLinkDTO { IsSuccess = false, Message = "Invalid order ID" });
 
-            var appTransId = IdGenerator.GenerateId(PaymentConstants.PrefixOrder);
+            var appTransId = $"{DateTime.Now:yyMMdd}_{orderId}";
             string description = $"Thanh toan don hang {orderId}";
 
             string orderUrl = await CallZaloPayCreateOrder(appTransId, (long)amount, description, orderId);
@@ -80,9 +80,13 @@ namespace Application.Services
                     { "app_trans_id", appTransId },
                     { "embed_data", JsonConvert.SerializeObject(embedData) },
                     { "item", JsonConvert.SerializeObject(items) },
-                    { "description", description },
-                    { "bank_code", "zalopayapp" }
+                    { "description", description }
                 };
+
+                if (!string.IsNullOrEmpty(_zaloConfig.CallbackUrl))
+                {
+                    param.Add("callback_url", _zaloConfig.CallbackUrl);
+                }
 
                 var data = $"{param["app_id"]}|{param["app_trans_id"]}|{param["app_user"]}|{param["amount"]}|{param["app_time"]}|{param["embed_data"]}|{param["item"]}";
                 param.Add("mac", CryptoHelper.HmacSha256(_zaloConfig.Key1, data));
@@ -94,11 +98,16 @@ namespace Application.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var resultString = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation("ZaloPay Response: {Response}", resultString);
                     var result = JsonConvert.DeserializeObject<dynamic>(resultString);
                     if (result != null && result.return_code == 1)
                     {
                         return result.order_url;
                     }
+                }
+                else 
+                {
+                    _logger.LogError("ZaloPay API returned status code: {StatusCode}", response.StatusCode);
                 }
 
                 return string.Empty;

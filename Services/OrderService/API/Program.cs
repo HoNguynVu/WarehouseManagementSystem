@@ -3,10 +3,12 @@ using Application.Features.Orders.Commands.CreateOrder;
 using Application.Interfaces;
 using Application.Services;
 using Application.Settings;
+using Application.Sagas;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.UnitOfWorks;
+using Infrastructure.Sagas;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -45,11 +47,19 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
-    // MassTransit
+    // MassTransit Saga & Consumers Configuration
     builder.Services.AddMassTransit(x =>
     {
-        x.AddConsumer<InventoryAllocatedConsumer>();
-        x.AddConsumer<InventoryAllocationFailedConsumer>();
+        // Register Saga State Machine
+        x.AddSagaStateMachine<OrderStateMachine, OrderState>()
+            .EntityFrameworkRepository(r =>
+            {
+                r.ConcurrencyMode = ConcurrencyMode.Optimistic;
+                r.ExistingDbContext<OrderDbContext>();
+            });
+
+        // Register Consumers
+        x.AddConsumer<UpdateOrderStatusConsumer>();
 
         x.UsingRabbitMq((context, cfg) =>
         {
@@ -112,9 +122,16 @@ try
     }
 
     app.UseHttpsRedirection();
-    app.UseAuthentication();
-    app.UseAuthorization();
+    // app.UseAuthentication();
+    // app.UseAuthorization();
     app.MapControllers();
+
+    // Auto-migration on startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        dbContext.Database.Migrate();
+    }
 
     app.Run();
 }

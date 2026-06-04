@@ -5,9 +5,12 @@ using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.UnitOfWorks;
+using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using SharedLibrary.IntegrationEvents;
 using SharedLibrary.Responses;
+using System.Linq;
 
 namespace Application.Features.Orders.Commands.CreateOrder
 {
@@ -16,17 +19,20 @@ namespace Application.Features.Orders.Commands.CreateOrder
         private readonly IOrderUow _uow;
         private readonly IPaymentService _paymentService;
         private readonly IMapper _mapper;
+        private readonly IPublishEndpoint _publishEndpoint;
         private readonly ILogger<CreateOrderCommandHandler> _logger;
 
         public CreateOrderCommandHandler(
             IOrderUow uow,
             IPaymentService paymentService,
             IMapper mapper,
+            IPublishEndpoint publishEndpoint,
             ILogger<CreateOrderCommandHandler> logger)
         {
             _uow = uow;
             _paymentService = paymentService;
             _mapper = mapper;
+            _publishEndpoint = publishEndpoint;
             _logger = logger;
         }
 
@@ -69,7 +75,19 @@ namespace Application.Features.Orders.Commands.CreateOrder
 
                 await _uow.CommitAsync();
 
-                // CreateOrderEvent is published only after payment is confirmed (in ProcessPaymentCallbackCommandHandler)
+                // Publish OrderSubmittedEvent to start Saga Orchestrator
+                await _publishEndpoint.Publish(new OrderSubmittedEvent
+                {
+                    OrderId = order.Id,
+                    AccountId = order.AccountId,
+                    TotalAmount = order.TotalAmount,
+                    Items = orderItems.Select(item => new OrderItemMessage
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity
+                    }).ToList()
+                }, cancellationToken);
+
                 PaymentLinkDTO? paymentInfo = null;
                 if (dto.PaymentMethod == PaymentConstants.MethodZaloPay)
                 {
