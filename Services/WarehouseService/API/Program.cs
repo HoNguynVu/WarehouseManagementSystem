@@ -16,17 +16,20 @@ using System.Reflection;
 using FluentValidation;
 using SharedLibrary.Middlewares;
 using Infrastructure.Data.Interceptors;
+using SharedLibrary.Observability;
 
 //Add Serilog configuration
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console() // Ghi ra màn hình Console
     .WriteTo.File("Logs/warehouse-log-.txt", rollingInterval: RollingInterval.Day) // Mỗi ngày tạo 1 file log riêng
-    .CreateLogger();
+    .CreateBootstrapLogger();
 
 try
 {
     Log.Information("Starting Warehouse Service API...");
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseWmsSerilog(builder.Configuration, "WarehouseService", "Logs/warehouse-log-.txt");
 
     // Add services to the container.
 
@@ -80,6 +83,7 @@ try
     });
 
     // Add HttpClient 
+    builder.Services.AddCorrelationIdPropagation();
     builder.Services.AddHttpClient("CatalogClient", client =>
     {
         var catalogUrl = builder.Configuration["CatalogApiUrl"];
@@ -154,6 +158,7 @@ try
             });
 
             // 3. Tự động cấu hình các endpoint (hòm thư) dựa trên tên của Consumer
+            cfg.UseCorrelationId(context);
             cfg.ConfigureEndpoints(context);
         });
     });
@@ -175,6 +180,8 @@ try
     });
 
     var app = builder.Build();
+
+    app.UseCorrelationId();
 
     // Migrate database automatically
     using (var scope = app.Services.CreateScope())

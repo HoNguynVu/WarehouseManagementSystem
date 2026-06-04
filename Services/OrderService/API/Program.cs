@@ -16,19 +16,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using SharedLibrary.Middlewares;
+using SharedLibrary.Observability;
 using SharedLibrary.Responses;
 using System.Text;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
-    .WriteTo.File("Logs/order-log-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+    .CreateBootstrapLogger();
 
 try
 {
     Log.Information("Starting Order Service API...");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseWmsSerilog(builder.Configuration, "OrderService", "Logs/order-log-.txt");
 
     builder.Services.AddControllers()
         .ConfigureApiBehaviorOptions(options =>
@@ -68,6 +70,7 @@ try
                 h.Password("guest");
             });
 
+            cfg.UseCorrelationId(context);
             cfg.ConfigureEndpoints(context);
         });
     });
@@ -98,10 +101,11 @@ try
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
             };
-        });
+    });
 
     // Settings & HttpClient
     builder.Services.Configure<ZaloPaySettings>(builder.Configuration.GetSection("ZaloPaySettings"));
+    builder.Services.AddCorrelationIdPropagation();
     builder.Services.AddHttpClient();
 
     // MediatR
@@ -113,6 +117,7 @@ try
 
     var app = builder.Build();
 
+    app.UseCorrelationId();
     app.UseGlobalException();
 
     if (app.Environment.IsDevelopment())

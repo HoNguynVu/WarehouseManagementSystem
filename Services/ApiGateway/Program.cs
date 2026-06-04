@@ -1,22 +1,27 @@
+using SharedLibrary.Observability;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseWmsSerilog(builder.Configuration, "ApiGateway", "Logs/gateway-log-.txt");
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy",
-        builder => builder.AllowAnyOrigin()
+        policy => policy.AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
 });
 
-// Đọc cấu hình YARP
+builder.Services.AddCorrelationIdPropagation();
+
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var app = builder.Build();
 
 app.UseCors("CorsPolicy");
+app.UseCorrelationId();
 
-// Map định tuyến
 app.MapReverseProxy();
 
 app.Run();
