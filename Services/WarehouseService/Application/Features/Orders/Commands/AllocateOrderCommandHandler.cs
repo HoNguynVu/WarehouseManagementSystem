@@ -86,6 +86,18 @@ namespace Application.Features.Orders.Commands
 
                 return ApiResponse<bool>.Success(true, "Đã tách đơn và giữ kho thành công!");
             }
+            catch (BadRequestException ex)
+            {
+                _uow.ClearTracker();
+
+                await _publishEndpoint.Publish(new InventoryAllocationFailedEvent
+                {
+                    OrderId = request.OrderId,
+                    Reason = ex.Message
+                }, cancellationToken);
+
+                return ApiResponse<bool>.Failure(ex.Message, 400);
+            }
             catch (DbUpdateConcurrencyException)
             {
                 _uow.ClearTracker();
@@ -96,11 +108,9 @@ namespace Application.Features.Orders.Commands
                     Reason = "Hệ thống đang bận do có nhiều người cùng mua sản phẩm này cùng lúc."
                 }, cancellationToken);
 
-                await _uow.SaveChangeAsync(cancellationToken);
-
-                throw;
+                return ApiResponse<bool>.Failure("Concurrency conflict", 409);
             }
-            catch (Exception ex) when (ex is not BadRequestException)
+            catch (Exception ex)
             { 
                 _uow.ClearTracker();    
 
@@ -110,9 +120,7 @@ namespace Application.Features.Orders.Commands
                     Reason = ex.Message
                 }, cancellationToken);
 
-                await _uow.SaveChangeAsync(cancellationToken);
-
-                throw new BadRequestException(ex.Message);
+                return ApiResponse<bool>.Failure(ex.Message, 500);
             }
         }
     }

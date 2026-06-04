@@ -1,5 +1,7 @@
-﻿using Domain.Entities;
+using Domain.Entities;
+using Infrastructure.Sagas;
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,6 +24,7 @@ namespace Infrastructure.Data
         public virtual DbSet<Order> Orders { get; set; }
         public virtual DbSet<OrderItem> OrderItems { get; set; }
         public virtual DbSet<Payment> Payments { get; set; }
+        public virtual DbSet<OrderState> OrderStates { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -38,11 +41,13 @@ namespace Infrastructure.Data
                 entity.ToTable("Orders");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
             });
             modelBuilder.Entity<OrderItem>(entity =>
             {
                 entity.ToTable("OrderItems");
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.OrderItems)
                     .HasForeignKey(e => e.OrderId)
@@ -52,11 +57,15 @@ namespace Infrastructure.Data
             {
                 entity.ToTable("Payments");
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.HasOne(e => e.Order)
                     .WithOne(o => o.Payment)
                     .HasForeignKey<Payment>(e => e.OrderId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+            // Register Saga Maps
+            modelBuilder.ApplyConfiguration<OrderState>(new OrderStateMap());
         }
     }
 }
