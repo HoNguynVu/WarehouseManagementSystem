@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 1. Bưu điện RabbitMQ
+  # 1. RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
     container_name: wms-rabbitmq
@@ -10,7 +10,7 @@ services:
       - "15672:15672"
     restart: always
 
-  # 2. Redis Cache 
+  # 2. Redis Cache
   redis:
     image: redis:alpine
     container_name: wms-redis
@@ -18,21 +18,21 @@ services:
       - "6379:6379"
     restart: always
 
-  # 3. Database PostgreSQL
+  # 3. PostgreSQL database
   postgres:
     image: postgres:15-alpine
     container_name: wms-postgres
     environment:
-      POSTGRES_USER: ${DB_POSTGRES_USER}         
+      POSTGRES_USER: ${DB_POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_POSTGRES_PASS}
-      POSTGRES_DB: warehouse_db      
+      POSTGRES_DB: warehouse_db
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
 
-  # 4. Database MongoDb
+  # 4. MongoDB database
   mongodb:
     image: mongo:latest
     container_name: wms-mongodb
@@ -45,7 +45,7 @@ services:
       - mongodata:/data/db
     restart: always
 
-    # 5. Database SQL Server riêng cho IdentityService (Port 1434)
+  # 5. SQL Server for IdentityService
   identity_sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: wms-identity-sqlserver
@@ -58,7 +58,7 @@ services:
       - identity_sqldata:/var/opt/mssql
     restart: always
 
-  # 6. Database SQL Server riêng cho OrderService (Port 1435)
+  # 6. SQL Server for OrderService
   order_sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: wms-order-sqlserver
@@ -71,10 +71,23 @@ services:
       - order_sqldata:/var/opt/mssql
     restart: always
 
+  # 7. Centralized logging UI
+  seq:
+    image: datalust/seq:latest
+    container_name: wms-seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    ports:
+      - "8081:80"
+      - "5341:5341"
+    volumes:
+      - seqdata:/data
+    restart: always
 
-# Khai báo ổ cứng ảo cho Docker
 volumes:
   pgdata:
   mongodata:
   identity_sqldata:
   order_sqldata:
+  seqdata:

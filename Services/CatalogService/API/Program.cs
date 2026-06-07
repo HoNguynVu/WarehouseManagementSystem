@@ -10,18 +10,20 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Serilog;
 using SharedLibrary.Middlewares;
+using SharedLibrary.Observability;
 using SharedLibrary.Responses;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
-    .WriteTo.File("Logs/catalog-log-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+    .CreateBootstrapLogger();
 
 try
 {
     Log.Information("Starting Catalog Service API...");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseWmsSerilog(builder.Configuration, "CatalogService", "Logs/catalog-log-.txt");
 
     // Add services to the container.
 
@@ -55,8 +57,12 @@ try
                 h.Username("guest");
                 h.Password("guest");
             });
+
+            cfg.UseCorrelationId(context);
         });
     });
+
+    builder.Services.AddCorrelationIdPropagation();
 
     // Cấu hình AutoMapper
     builder.Services.AddAutoMapper(config =>
@@ -89,6 +95,7 @@ try
 
     var app = builder.Build();
 
+    app.UseCorrelationId();
     app.UseGlobalException();
 
     // Configure the HTTP request pipeline.

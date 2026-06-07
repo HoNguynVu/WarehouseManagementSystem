@@ -11,6 +11,7 @@ namespace Infracstructure.UnitOfWorks
     public interface IAuthUow : ITransactionManager
     {
         IAccountRepository Accounts { get; }
+        ICustomerAddressRepository CustomerAddresses { get; }
         IOtpRepository Otps { get; }
         IRefreshTokenRepository RefreshTokens { get; }
     }

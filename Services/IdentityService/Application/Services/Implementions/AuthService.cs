@@ -42,6 +42,16 @@ namespace Application.Services.Implementions
                 return ApiResponse<string>.Failure("Username is required.");
             }
 
+            if (string.IsNullOrWhiteSpace(request.FullName))
+            {
+                return ApiResponse<string>.Failure("Full name is required.");
+            }
+
+            if (request.FullName.Length > 100)
+            {
+                return ApiResponse<string>.Failure("Full name must be 100 characters or fewer.");
+            }
+
             if (string.IsNullOrEmpty(request.Password))
             {
                 return ApiResponse<string>.Failure("Password is required.");

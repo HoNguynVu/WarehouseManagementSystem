@@ -21,6 +21,7 @@ namespace Infracstructure.Data
 
         //Auth
         public virtual DbSet<Accounts> Accounts { get; set; }
+        public virtual DbSet<CustomerAddress> CustomerAddresses { get; set; }
         public virtual DbSet<Otps> Otps { get; set; }
         public virtual DbSet<RefreshTokens> RefreshTokens { get; set; }
 
@@ -40,8 +41,27 @@ namespace Infracstructure.Data
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.Username).IsUnique();
                 entity.HasIndex(e => e.Email).IsUnique();
+                entity.Property(e => e.FullName).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
                 entity.Property(e => e.Status).HasDefaultValue(true);
+            });
+
+            modelBuilder.Entity<CustomerAddress>(entity =>
+            {
+                entity.ToTable("CustomerAddresses");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.AccountId);
+                entity.Property(e => e.ReceiverName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.ReceiverPhone).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Province).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.District).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Ward).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.StreetAddress).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+                entity.HasOne(e => e.Account)
+                    .WithMany(a => a.CustomerAddresses)
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<Otps>(entity =>
