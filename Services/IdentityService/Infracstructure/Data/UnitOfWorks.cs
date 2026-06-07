@@ -18,6 +18,7 @@ namespace Infracstructure.Data
         private IDbContextTransaction? _transaction;
 
         public IAccountRepository Accounts { get; }
+        public ICustomerAddressRepository CustomerAddresses { get; }
         public IOtpRepository Otps { get; }
         public IRefreshTokenRepository RefreshTokens { get; }
 
@@ -27,6 +28,7 @@ namespace Infracstructure.Data
             _transaction = transaction;
 
             Accounts = new AccountRepository(_context);
+            CustomerAddresses = new CustomerAddressRepository(_context);
             Otps = new OtpRepository(_context);
             RefreshTokens = new RefreshTokenRepository(_context);
         }
