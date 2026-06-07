@@ -30,6 +30,8 @@ namespace Application.Mappings
                 .ForMember(dest => dest.ProductName, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
             CreateMap<Inventory, InventoryDTO>();
+            CreateMap<StockReservation, StockReservationDTO>()
+                .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.Warehouse != null ? src.Warehouse.Name : "Unknown Warehouse"));
         }
     }
 }

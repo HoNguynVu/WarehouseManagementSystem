@@ -3,6 +3,7 @@ using Application.Features.Orders.Commands.CreateOrder;
 using Application.Features.Orders.Commands.CancelOrder;
 using Application.Features.Orders.Queries.GetAllOrders;
 using Application.Features.Orders.Queries.GetOrderById;
+using Application.Features.Orders.Queries.GetOrderState;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,15 @@ namespace API.Controllers
                 return StatusCode(response.StatusCode, response);
 
             return Ok(response);
+        }
+
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetHistory(string id)
+        {
+            var result = await _mediator.Send(new GetOrderStateQuery(id));
+            if (!result.IsSuccess)
+                return NotFound(result);
+            return Ok(result);
         }
 
         [HttpGet]
