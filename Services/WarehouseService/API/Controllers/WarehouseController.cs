@@ -5,6 +5,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Application.Features.Orders.Commands;
+using Application.Features.Orders.Queries.GetOrderReservations;
 using Application.Features.Warehouses.Commands.CreateWarehouse;
 using Application.Features.Warehouses.Commands.UpdateWarehouse;
 using Application.Features.Warehouses.Commands.DeleteWarehouse;
@@ -92,6 +93,12 @@ namespace API.Controllers
         public async Task<IActionResult> AllocateOrder([FromBody] AllocateOrderCommand command)
         {
             return Ok(await _mediator.Send(command));
+        }
+
+        [HttpGet("reservations/order/{orderId}")]
+        public async Task<IActionResult> GetOrderReservations(string orderId)
+        {
+            return Ok(await _mediator.Send(new GetOrderReservationsQuery(orderId)));
         }
 
         [HttpPost("release-order")]

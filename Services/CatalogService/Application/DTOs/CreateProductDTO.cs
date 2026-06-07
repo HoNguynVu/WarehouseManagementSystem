@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Application.DTOs
 {
@@ -14,6 +14,8 @@ namespace Application.DTOs
         public double Price { get; set; }
         [Required(ErrorMessage = "Mã danh mục không được để trống")]
         public string CategoryId { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        
         [Required(ErrorMessage = "Tên danh mục không được để trống")]
         public Dictionary<string, string> Specifications { get; set; } = new Dictionary<string, string>();
     }
