@@ -93,6 +93,7 @@ namespace Application.Services.Implementions
                 Code = AuthHelpers.GenerateOTP(),
                 AccountId = new_account.Id,
                 Purpose = OtpPurposes.EmailVerification,
+                IsActive = true,
                 ExpirationTime = DateTime.UtcNow.AddMinutes(10),
                 CreatedAt = DateTime.UtcNow
             };
@@ -145,7 +146,8 @@ namespace Application.Services.Implementions
                 Purpose = OtpPurposes.EmailVerification,
                 ExpirationTime = DateTime.UtcNow.AddMinutes(10),
                 CreatedAt = DateTime.UtcNow,
-                AccountId = account.Id
+                AccountId = account.Id,
+                IsActive = true
             };
 
             try
