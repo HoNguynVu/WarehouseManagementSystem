@@ -34,7 +34,16 @@ namespace Application.Features.Warehouses.Queries.GetAllWarehouses
             }
 
             var warehouses = await _warehouseUow.Warehouse.GetAllAsync();
-            var dtos = _mapper.Map<IEnumerable<WarehouseDTO>>(warehouses);
+            var dtos = _mapper.Map<IEnumerable<WarehouseDTO>>(warehouses).ToList();
+
+            var stockSums = await _warehouseUow.Warehouse.GetWarehousesStockAsync();
+            foreach (var dto in dtos)
+            {
+                if (stockSums.TryGetValue(dto.Id, out var stock))
+                {
+                    dto.CurrentStock = stock;
+                }
+            }
 
             var cacheOptions = new DistributedCacheEntryOptions
             {

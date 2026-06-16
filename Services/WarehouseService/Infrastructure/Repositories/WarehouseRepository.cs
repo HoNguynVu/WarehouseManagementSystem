@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +22,7 @@ namespace Infrastructure.Repositories
         }
         public async Task<Warehouse?> GetByIdAsync(string id)
         {
-            return await _context.Warehouses.FirstOrDefaultAsync(w => w.Id == id);
+            return await _context.Warehouses.Include(w => w.Inventories).FirstOrDefaultAsync(w => w.Id == id);
         }
         public void Update(Warehouse warehouse)
         {
@@ -63,6 +63,14 @@ namespace Infrastructure.Repositories
         public void DeleteReservation(StockReservation reservation)
         {
             _context.StockReservations.Remove(reservation);
+        }
+        public async Task<Dictionary<string, int>> GetWarehousesStockAsync()
+        {
+            var stocks = await _context.Inventories
+                .GroupBy(i => i.WarehouseId)
+                .Select(g => new { WarehouseId = g.Key, CurrentStock = g.Sum(i => i.Quantity) })
+                .ToListAsync();
+            return stocks.ToDictionary(x => x.WarehouseId, x => x.CurrentStock);
         }
     }
 }

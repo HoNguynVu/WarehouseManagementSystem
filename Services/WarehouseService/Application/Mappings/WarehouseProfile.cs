@@ -11,7 +11,8 @@ namespace Application.Mappings
     {
         public WarehouseProfile()
         {
-            CreateMap<Warehouse, WarehouseDTO>();
+            CreateMap<Warehouse, WarehouseDTO>()
+                .ForMember(dest => dest.CurrentStock, opt => opt.MapFrom(src => src.Inventories != null ? src.Inventories.Sum(i => i.Quantity) : 0));
             CreateMap<CreateWarehouseCommand, Warehouse>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())

@@ -52,6 +52,9 @@ namespace Application.Features.Orders.Commands.CreateOrder
                     Id = IdGenerator.GenerateId(PaymentConstants.PrefixOrder),
                     AccountId = request.AccountId,
                     PaymentMethod = dto.PaymentMethod,
+                    ReceiverName = dto.ReceiverName,
+                    ReceiverPhone = dto.ReceiverPhone,
+                    ShippingAddress = dto.ShippingAddress,
                     Status = PaymentConstants.StatusPending,
                     CreatedAt = DateTimeOffset.UtcNow,
                     TotalAmount = dto.Items.Sum(i => i.Quantity * i.UnitPrice)

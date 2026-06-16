@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using SharedLibrary.Seedwork;
 using System;
 using System.Collections.Generic;
@@ -10,5 +10,6 @@ namespace Domain.Interfaces
 {
     public interface IOrderRepository : IGenericInterface<Order, string>
     {
+        Task<IEnumerable<Order>> GetByAccountIdAsync(string accountId);
     }
 }

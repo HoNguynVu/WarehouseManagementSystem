@@ -4,6 +4,7 @@ using Application.Features.Orders.Commands.CancelOrder;
 using Application.Features.Orders.Queries.GetAllOrders;
 using Application.Features.Orders.Queries.GetOrderById;
 using Application.Features.Orders.Queries.GetOrderState;
+using Application.Features.Orders.Queries.GetOrdersByAccountId;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize] // Gỡ bỏ để test
+    [Authorize] // Bắt buộc đăng nhập
     public class OrderController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -25,9 +26,9 @@ namespace API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateOrderDTO dto)
         {
-            var accountId = User.FindFirst("accountId")?.Value ?? "test-account-id"; // Dùng ID test nếu không có token
+            var accountId = User.FindFirst("accountId")?.Value;
             if (string.IsNullOrEmpty(accountId))
-                return Unauthorized();
+                return Unauthorized("Token must contain accountId");
 
             var response = await _mediator.Send(new CreateOrderCommand { Dto = dto, AccountId = accountId });
             if (!response.IsSuccess)
@@ -55,6 +56,20 @@ namespace API.Controllers
             return Ok(result);
         }
 
+        [HttpGet("account")]
+        public async Task<IActionResult> GetByAccount()
+        {
+            var accountId = User.FindFirst("accountId")?.Value;
+            if (string.IsNullOrEmpty(accountId))
+                return Unauthorized("Token must contain accountId");
+
+            var response = await _mediator.Send(new GetOrdersByAccountIdQuery(accountId));
+            if (!response.IsSuccess)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -68,9 +83,9 @@ namespace API.Controllers
         [HttpPost("{id}/cancel")]
         public async Task<IActionResult> Cancel(string id)
         {
-            var accountId = User.FindFirst("accountId")?.Value ?? "test-account-id"; // Dùng ID test nếu không có token
+            var accountId = User.FindFirst("accountId")?.Value;
             if (string.IsNullOrEmpty(accountId))
-                return Unauthorized();
+                return Unauthorized("Token must contain accountId");
 
             var response = await _mediator.Send(new CancelOrderCommand { OrderId = id, AccountId = accountId });
             if (!response.IsSuccess)

@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 
 namespace Domain.Interfaces
 {
@@ -15,5 +15,6 @@ namespace Domain.Interfaces
         Task<IEnumerable<StockReservation>> GetReservationsByOrderIdAsync(string orderId);
         Task<Inventory?> GetInventoryAsync(string warehouseId, string productId);
         void DeleteReservation(StockReservation reservation);
+        Task<Dictionary<string, int>> GetWarehousesStockAsync();
     }
 }

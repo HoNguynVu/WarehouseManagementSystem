@@ -5,6 +5,12 @@ namespace Application.DTOs
     public class CreateOrderDTO
     {
         public string PaymentMethod { get; set; } = "ZaloPay";
+        
+        // Shipping Information
+        public string ReceiverName { get; set; } = string.Empty;
+        public string ReceiverPhone { get; set; } = string.Empty;
+        public string ShippingAddress { get; set; } = string.Empty;
+
         public List<OrderItemDTO> Items { get; set; } = new List<OrderItemDTO>();
     }
 

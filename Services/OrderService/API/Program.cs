@@ -19,6 +19,7 @@ using SharedLibrary.Middlewares;
 using SharedLibrary.Observability;
 using SharedLibrary.Responses;
 using System.Text;
+using Microsoft.OpenApi.Models;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -47,7 +48,34 @@ try
         });
 
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Order API", Version = "v1" });
+
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "Nhập token theo chuẩn: Bearer {token}",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "Bearer"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                new string[] {}
+            }
+        });
+    });
 
     // MassTransit Saga & Consumers Configuration
     builder.Services.AddMassTransit(x =>
@@ -127,8 +155,8 @@ try
     }
 
     app.UseHttpsRedirection();
-    // app.UseAuthentication();
-    // app.UseAuthorization();
+    app.UseAuthentication();
+    app.UseAuthorization();
     app.MapControllers();
 
     // Auto-migration on startup

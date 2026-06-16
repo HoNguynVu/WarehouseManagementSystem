@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs
+namespace Application.DTOs
 {
     public class WarehouseDTO
     {
@@ -10,5 +10,7 @@
         public string? CreatedBy { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
         public string? UpdatedBy { get; set; }
+        public int CurrentStock { get; set; }
+        public List<InventoryDTO> Inventories { get; set; } = new List<InventoryDTO> ();
     }
 }

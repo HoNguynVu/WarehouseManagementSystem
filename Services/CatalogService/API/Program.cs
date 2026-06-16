@@ -12,6 +12,7 @@ using Serilog;
 using SharedLibrary.Middlewares;
 using SharedLibrary.Observability;
 using SharedLibrary.Responses;
+using Microsoft.OpenApi.Models;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -46,7 +47,34 @@ try
         });
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Catalog API", Version = "v1" });
+
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "Nhập token theo chuẩn: Bearer {token}",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "Bearer"
+        });
+
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                new string[] {}
+            }
+        });
+    });
 
     // Cấu hình MassTransit với RabbitMQ
     builder.Services.AddMassTransit(x =>
