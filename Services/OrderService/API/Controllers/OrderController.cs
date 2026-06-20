@@ -93,5 +93,19 @@ namespace API.Controllers
 
             return Ok(response);
         }
+
+        [HttpPost("{id}/retry-payment")]
+        public async Task<IActionResult> RetryPayment(string id)
+        {
+            var accountId = User.FindFirst("accountId")?.Value;
+            if (string.IsNullOrEmpty(accountId))
+                return Unauthorized("Token must contain accountId");
+
+            var response = await _mediator.Send(new Application.Features.Orders.Commands.RetryPayment.RetryPaymentCommand { OrderId = id, AccountId = accountId });
+            if (!response.IsSuccess)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
     }
 }

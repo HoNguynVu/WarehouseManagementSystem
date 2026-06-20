@@ -39,26 +39,39 @@ namespace Application.Services
             if (string.IsNullOrEmpty(orderId))
                 return (400, new PaymentLinkDTO { IsSuccess = false, Message = "Invalid order ID" });
 
-            var appTransId = $"{DateTime.Now:yyMMdd}_{orderId}";
+            // Generate a unique appTransId to allow retrying payments for the same order
+            var appTransId = $"{DateTime.Now:yyMMdd}_{orderId}_{DateTime.Now:HHmmss}";
             string description = $"Thanh toan don hang {orderId}";
 
             string orderUrl = await CallZaloPayCreateOrder(appTransId, (long)amount, description, orderId);
             if (string.IsNullOrEmpty(orderUrl))
                 return (500, new PaymentLinkDTO { IsSuccess = false, Message = "Failed to create ZaloPay order" });
 
-            var payment = new Payment
-            {
-                Id = IdGenerator.GenerateId("PAY"),
-                OrderId = orderId,
-                PaymentMethod = PaymentConstants.MethodZaloPay,
-                Amount = amount,
-                TransactionId = appTransId,
-                Status = PaymentConstants.StatusPending,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
+            var existingPayment = await _uow.Payments.GetByOrderIdAsync(orderId);
 
             await _uow.BeginTransactionAsync();
-            _uow.Payments.Create(payment);
+            if (existingPayment != null)
+            {
+                existingPayment.TransactionId = appTransId;
+                existingPayment.Amount = amount;
+                existingPayment.Status = PaymentConstants.StatusPending;
+                existingPayment.UpdatedAt = DateTimeOffset.UtcNow;
+                _uow.Payments.Update(existingPayment);
+            }
+            else
+            {
+                var payment = new Payment
+                {
+                    Id = IdGenerator.GenerateId("PAY"),
+                    OrderId = orderId,
+                    PaymentMethod = PaymentConstants.MethodZaloPay,
+                    Amount = amount,
+                    TransactionId = appTransId,
+                    Status = PaymentConstants.StatusPending,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+                _uow.Payments.Create(payment);
+            }
             await _uow.CommitAsync();
 
             return (200, new PaymentLinkDTO { IsSuccess = true, PaymentId = appTransId, PaymentUrl = orderUrl, Message = "ZaloPay payment link created successfully." });
@@ -71,16 +84,20 @@ namespace Application.Services
                 var embedData = new { redirecturl = _zaloConfig.FrontEndUrl };
                 var items = new[] { new { orderId } };
 
+                // Fix: ZaloPay Sandbox limits transactions to 10M VND.
+                long sandboxAmount = amount > 10000000 ? 50000 : amount;
+
                 var param = new Dictionary<string, string>
                 {
                     { "app_id", _zaloConfig.AppId },
                     { "app_user", "Warehouse Management System" },
                     { "app_time", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-                    { "amount", amount.ToString() },
+                    { "amount", sandboxAmount.ToString() },
                     { "app_trans_id", appTransId },
                     { "embed_data", JsonConvert.SerializeObject(embedData) },
                     { "item", JsonConvert.SerializeObject(items) },
-                    { "description", description }
+                    { "description", description },
+                    { "bank_code", "VNBANK" }
                 };
 
                 if (!string.IsNullOrEmpty(_zaloConfig.CallbackUrl))
