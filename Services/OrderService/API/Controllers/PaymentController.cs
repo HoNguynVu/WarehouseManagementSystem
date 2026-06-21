@@ -27,5 +27,12 @@ namespace API.Controllers
             // Still return 200 with fail code so ZaloPay won't retry unrecoverable errors (e.g. invalid MAC)
             return Ok(new { return_code = 0, return_message = "fail" });
         }
+
+        [HttpPost("{orderId}/mock-payment")]
+        public async Task<IActionResult> MockPayment(string orderId)
+        {
+            var result = await _mediator.Send(new Application.Features.Payments.Commands.MockPayment.MockPaymentCommand { OrderId = orderId });
+            return StatusCode(result.StatusCode, result);
+        }
     }
 }

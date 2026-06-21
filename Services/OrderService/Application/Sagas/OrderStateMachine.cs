@@ -62,9 +62,8 @@ namespace Application.Sagas
                         context.Saga.UpdatedAt = DateTime.UtcNow;
                     })
                     .IfElse(context => context.Saga.IsPaid,
-                        x => x.Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Completed })
-                              .TransitionTo(Completed)
-                              .Finalize(),
+                        x => x.Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Paid })
+                              .TransitionTo(Completed),
                         x => x.Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.AwaitingPayment })
                               .TransitionTo(AwaitingPayment)
                     ),
@@ -80,8 +79,7 @@ namespace Application.Sagas
                         Status = OrderStatus.Failed, 
                         Reason = context.Message.Reason 
                     })
-                    .TransitionTo(Failed)
-                    .Finalize(),
+                    .TransitionTo(Failed),
 
                 When(PaymentSuccess)
                     .Then(context =>
@@ -98,9 +96,8 @@ namespace Application.Sagas
                         context.Saga.IsPaid = true;
                         context.Saga.UpdatedAt = DateTime.UtcNow;
                     })
-                    .Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Completed })
-                    .TransitionTo(Completed)
-                    .Finalize(),
+                    .Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Paid })
+                    .TransitionTo(Completed),
 
                 When(OrderCancelled)
                     .Then(context =>
@@ -110,7 +107,6 @@ namespace Application.Sagas
                     .Publish(context => new ReleaseOrderStockCommand { OrderId = context.Saga.OrderId })
                     .Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Cancelled })
                     .TransitionTo(Cancelled)
-                    .Finalize()
             );
 
             DuringAny(
@@ -124,10 +120,8 @@ namespace Application.Sagas
                     )
                     .Publish(context => new UpdateOrderStatusCommand { OrderId = context.Saga.OrderId, Status = OrderStatus.Cancelled })
                     .TransitionTo(Cancelled)
-                    .Finalize()
             );
 
-            SetCompletedWhenFinalized();
         }
     }
 }

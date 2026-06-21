@@ -107,5 +107,20 @@ namespace API.Controllers
 
             return Ok(response);
         }
+
+        public class UpdateStatusRequest {
+            public string Status { get; set; } = string.Empty;
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusRequest request)
+        {
+            // Optional: You could check if user is Admin here by reading roles from JWT
+            var response = await _mediator.Send(new Application.Features.Orders.Commands.UpdateOrderStatus.UpdateOrderStatusCommand { OrderId = id, NewStatus = request.Status });
+            if (!response.IsSuccess)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
     }
 }

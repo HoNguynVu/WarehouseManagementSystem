@@ -90,7 +90,7 @@ namespace Application.Services
                 var param = new Dictionary<string, string>
                 {
                     { "app_id", _zaloConfig.AppId },
-                    { "app_user", "Warehouse Management System" },
+                    { "app_user", "User_" + appTransId }, // Fix: Must be unique to prevent ZaloPay Anti-Fraud (-244)
                     { "app_time", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
                     { "amount", sandboxAmount.ToString() },
                     { "app_trans_id", appTransId },
