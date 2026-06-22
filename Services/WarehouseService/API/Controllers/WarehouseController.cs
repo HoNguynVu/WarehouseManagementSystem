@@ -106,5 +106,11 @@ namespace API.Controllers
         {
             return Ok(await _mediator.Send(command, cancellationToken));
         }
+
+        [HttpGet("low-stock")]
+        public async Task<IActionResult> GetLowStock([FromQuery] int threshold = 15)
+        {
+            return Ok(await _mediator.Send(new Application.Features.Warehouses.Queries.GetLowStock.GetLowStockQuery(threshold)));
+        }
     }
 }

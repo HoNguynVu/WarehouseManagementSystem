@@ -16,5 +16,6 @@ namespace Domain.Interfaces
         Task<Inventory?> GetInventoryAsync(string warehouseId, string productId);
         void DeleteReservation(StockReservation reservation);
         Task<Dictionary<string, int>> GetWarehousesStockAsync();
+        Task<IEnumerable<Inventory>> GetLowStockAsync(int threshold);
     }
 }

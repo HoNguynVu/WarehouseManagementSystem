@@ -64,6 +64,15 @@ namespace Infrastructure.Repositories
         {
             _context.StockReservations.Remove(reservation);
         }
+
+        public async Task<IEnumerable<Inventory>> GetLowStockAsync(int threshold)
+        {
+            return await _context.Inventories
+                .Include(i => i.Warehouse)
+                .Where(i => i.Quantity < threshold)
+                .ToListAsync();
+        }
+
         public async Task<Dictionary<string, int>> GetWarehousesStockAsync()
         {
             var stocks = await _context.Inventories
