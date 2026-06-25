@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharedLibrary.Observability;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
+using Yarp.ReverseProxy.Forwarder;
+using ApiGateway;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +20,6 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
-// Configure Rate Limiter
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -34,7 +35,7 @@ builder.Services.AddRateLimiter(options =>
 
     options.OnRejected = async (context, token) =>
     {
-        context.HttpContext.Response.StatusCode = 429; // Too Many Requests
+        context.HttpContext.Response.StatusCode = 429;
         await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
     };
 
@@ -51,6 +52,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddCorrelationIdPropagation();
+
+// Register Custom Polly Factory for YARP
+builder.Services.AddSingleton<IForwarderHttpClientFactory, ResilientForwarderHttpClientFactory>();
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -73,7 +77,7 @@ var app = builder.Build();
 
 app.UseCors("CorsPolicy");
 app.UseCorrelationId();
-app.UseRateLimiter(); // Add Rate Limiter Middleware
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
