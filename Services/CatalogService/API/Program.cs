@@ -1,7 +1,4 @@
-using Application.Interfaces;
-using Application.Services;
-using Domain.Interfaces;
-using Infrastructure.Data;
+﻿using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Settings;
 using MassTransit;
@@ -13,6 +10,7 @@ using SharedLibrary.Middlewares;
 using SharedLibrary.Observability;
 using SharedLibrary.Responses;
 using Microsoft.OpenApi.Models;
+using Domain.Interfaces;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -26,6 +24,17 @@ try
 
     builder.Host.UseWmsSerilog(builder.Configuration, "CatalogService", "Logs/catalog-log-.txt");
 
+    // Add CORS
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("CorsPolicy", builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+    });
+
     // Add services to the container.
 
     builder.Services.AddControllers()
@@ -33,19 +42,17 @@ try
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                // Lấy danh sách các lỗi validation
                 var errors = context.ModelState.Values
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
 
-                // Đóng gói vào chuẩn ApiResponse của Vinh
                 var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
 
                 return new BadRequestObjectResult(response);
             };
         });
-    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+        
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
@@ -76,7 +83,7 @@ try
         });
     });
 
-    // Cấu hình MassTransit với RabbitMQ
+    // MassTransit & RabbitMQ
     builder.Services.AddMassTransit(x =>
     {
         x.UsingRabbitMq((context, cfg) =>
@@ -92,23 +99,24 @@ try
 
     builder.Services.AddCorrelationIdPropagation();
 
-    // Cấu hình AutoMapper
+    // MediatR
+    builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(AppDomain.CurrentDomain.Load("Application")));
+
+    // AutoMapper
     builder.Services.AddAutoMapper(config =>
     {
         config.AddProfile<Application.Mappings.CatalogProfile>();
     });
 
-    // Cấu hình Redis Cache
+    // Redis Cache
     builder.Services.AddStackExchangeRedisCache(options =>
     {
         options.Configuration = "localhost:6379";
         options.InstanceName = "CatalogSystem_";
     });
 
-    //Đọc cấu hình MongoDB từ appsettings.json và đăng ký dịch vụ
+    // MongoDB
     builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
-
-    //Đăng ký dịch vụ MongoDB Client
     builder.Services.AddSingleton<IMongoClient>(sp =>
     {
         var settings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
@@ -117,16 +125,15 @@ try
 
     builder.Services.AddScoped<CatalogContext>();
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
-    builder.Services.AddScoped<IProductService, ProductService>();
     builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-    builder.Services.AddScoped<ICategoryService, CategoryService>();
 
     var app = builder.Build();
 
     app.UseCorrelationId();
     app.UseGlobalException();
+    
+    app.UseCors("CorsPolicy");
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
