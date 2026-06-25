@@ -28,7 +28,7 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 10,
+                PermitLimit = 50,
                 QueueLimit = 0,
                 Window = TimeSpan.FromSeconds(10)
             }));
@@ -45,7 +45,7 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 10,
+                PermitLimit = 50,
                 QueueLimit = 0,
                 Window = TimeSpan.FromSeconds(10)
             }));
@@ -93,5 +93,6 @@ app.MapHealthChecksUI(options =>
 app.MapReverseProxy();
 
 app.Run();
+
 
 
