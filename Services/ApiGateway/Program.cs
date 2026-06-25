@@ -60,16 +60,16 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 builder.Services.AddHealthChecks()
-    .AddRabbitMQ(sp => new RabbitMQ.Client.ConnectionFactory { Uri = new Uri("amqp://guest:guest@localhost:5672") }.CreateConnectionAsync(), name: "RabbitMQ")
-    .AddRedis("localhost:6379", name: "Redis Cache")
-    .AddMongoDb(sp => new MongoDB.Driver.MongoClient("mongodb://admin:123@localhost:27018/?authSource=admin"), name: "MongoDB (Catalog)")
-    .AddNpgSql("Host=localhost;Port=5433;Database=warehouse_db;Username=admin;Password=123", name: "PostgreSQL (Warehouse)")
-    .AddSqlServer("Server=localhost,1435;Database=OrderDb;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Order)")
-    .AddSqlServer("Server=localhost,1434;Database=master;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Identity)");
+    .AddRabbitMQ(sp => new RabbitMQ.Client.ConnectionFactory { Uri = new Uri(builder.Configuration["HealthChecks:RabbitMQ"] ?? "amqp://guest:guest@localhost:5672") }.CreateConnectionAsync(), name: "RabbitMQ")
+    .AddRedis(builder.Configuration["HealthChecks:Redis"] ?? "localhost:6379", name: "Redis Cache")
+    .AddMongoDb(sp => new MongoDB.Driver.MongoClient(builder.Configuration["HealthChecks:MongoDB"] ?? "mongodb://admin:123@localhost:27018/?authSource=admin"), name: "MongoDB (Catalog)")
+    .AddNpgSql(builder.Configuration["HealthChecks:PostgreSQL"] ?? "Host=localhost;Port=5433;Database=warehouse_db;Username=admin;Password=123", name: "PostgreSQL (Warehouse)")
+    .AddSqlServer(builder.Configuration["HealthChecks:SQLOrder"] ?? "Server=localhost,1435;Database=OrderDb;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Order)")
+    .AddSqlServer(builder.Configuration["HealthChecks:SQLIdentity"] ?? "Server=localhost,1434;Database=master;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Identity)");
 
 builder.Services.AddHealthChecksUI(setupSettings: setup =>
 {
-    setup.AddHealthCheckEndpoint("System Health", "/health");
+    setup.AddHealthCheckEndpoint("System Health", "http://localhost:8080/health");
     setup.SetEvaluationTimeInSeconds(10);
 }).AddInMemoryStorage();
 
@@ -93,3 +93,5 @@ app.MapHealthChecksUI(options =>
 app.MapReverseProxy();
 
 app.Run();
+
+

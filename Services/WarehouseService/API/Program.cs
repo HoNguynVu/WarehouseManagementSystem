@@ -1,4 +1,4 @@
-using API.Consumers;
+﻿using API.Consumers;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
@@ -20,8 +20,8 @@ using SharedLibrary.Observability;
 
 //Add Serilog configuration
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console() // Ghi ra màn hình Console
-    .WriteTo.File("Logs/warehouse-log-.txt", rollingInterval: RollingInterval.Day) // Mỗi ngày tạo 1 file log riêng
+    .WriteTo.Console() // Ghi ra mÃ n hÃ¬nh Console
+    .WriteTo.File("Logs/warehouse-log-.txt", rollingInterval: RollingInterval.Day) // Má»—i ngÃ y táº¡o 1 file log riÃªng
     .CreateBootstrapLogger();
 
 try
@@ -38,14 +38,14 @@ try
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                // Lấy danh sách các lỗi validation
+                // Láº¥y danh sÃ¡ch cÃ¡c lá»—i validation
                 var errors = context.ModelState.Values
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
 
-                // Đóng gói vào chuẩn ApiResponse của Vinh
-                var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
+                // ÄÃ³ng gÃ³i vÃ o chuáº©n ApiResponse cá»§a Vinh
+                var response = ApiResponse<object>.Failure("Dá»¯ liá»‡u khÃ´ng há»£p lá»‡", 400, errors);
 
                 return new BadRequestObjectResult(response);
             };
@@ -56,10 +56,10 @@ try
     {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "Warehouse API", Version = "v1" });
 
-        //Thêm nút Authorize 
+        //ThÃªm nÃºt Authorize 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            Description = "Nhập token theo chuẩn: Bearer {token}",
+            Description = "Nháº­p token theo chuáº©n: Bearer {token}",
             Name = "Authorization",
             In = ParameterLocation.Header,
             Type = SecuritySchemeType.Http,
@@ -133,40 +133,40 @@ try
 
     builder.Services.AddMassTransit(x =>
     {
-        // Đăng ký Outbox để đảm bảo tính nhất quán khi gửi sự kiện ra ngoài sau khi đã cập nhật database thành công
+        // ÄÄƒng kÃ½ Outbox Ä‘á»ƒ Ä‘áº£m báº£o tÃ­nh nháº¥t quÃ¡n khi gá»­i sá»± kiá»‡n ra ngoÃ i sau khi Ä‘Ã£ cáº­p nháº­t database thÃ nh cÃ´ng
         x.AddEntityFrameworkOutbox<WarehouseDbContext>(o =>
         {
-            // Quét database mỗi giây để xem có thư nào chưa gửi thì gửi đi
+            // QuÃ©t database má»—i giÃ¢y Ä‘á»ƒ xem cÃ³ thÆ° nÃ o chÆ°a gá»­i thÃ¬ gá»­i Ä‘i
             o.QueryDelay = TimeSpan.FromSeconds(1);
 
-            // Khai báo loại Database đang dùng
+            // Khai bÃ¡o loáº¡i Database Ä‘ang dÃ¹ng
             o.UsePostgres();
             o.UseBusOutbox();
         });
 
-        // 1. Đăng ký cái đài lắng nghe
+        // 1. ÄÄƒng kÃ½ cÃ¡i Ä‘Ã i láº¯ng nghe
         x.AddConsumer<ProductUpdatedConsumer>();
         x.AddConsumer<AllocateOrderConsumer>();
         x.AddConsumer<ReleaseOrderStockConsumer>();
-        // 2. Kết nối tới Bưu điện RabbitMQ
+        // 2. Káº¿t ná»‘i tá»›i BÆ°u Ä‘iá»‡n RabbitMQ
         x.UsingRabbitMq((context, cfg) =>
         {
-            cfg.Host("localhost", "/", h =>
+            cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "localhost", "/", h =>
             {
                 h.Username("guest");
                 h.Password("guest");
             });
 
-            // 3. Tự động cấu hình các endpoint (hòm thư) dựa trên tên của Consumer
+            // 3. Tá»± Ä‘á»™ng cáº¥u hÃ¬nh cÃ¡c endpoint (hÃ²m thÆ°) dá»±a trÃªn tÃªn cá»§a Consumer
             cfg.UseCorrelationId(context);
             cfg.ConfigureEndpoints(context);
         });
     });
 
-    //Cấu hình Redis
+    //Cáº¥u hÃ¬nh Redis
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-        options.Configuration = "localhost:6379"; 
+        options.Configuration = builder.Configuration["Redis:Host"] ?? "localhost:6379"; 
         options.InstanceName = "WarehouseSystem_";
     });
 
@@ -216,3 +216,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+

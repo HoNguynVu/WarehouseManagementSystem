@@ -88,7 +88,7 @@ try
     {
         x.UsingRabbitMq((context, cfg) =>
         {
-            cfg.Host("localhost", "/", h => {
+            cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "localhost", "/", h => {
                 h.Username("guest");
                 h.Password("guest");
             });
@@ -111,7 +111,7 @@ try
     // Redis Cache
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-        options.Configuration = "localhost:6379";
+        options.Configuration = builder.Configuration["Redis:Host"] ?? "localhost:6379";
         options.InstanceName = "CatalogSystem_";
     });
 
@@ -156,3 +156,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+

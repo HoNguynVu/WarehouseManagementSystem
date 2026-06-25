@@ -1,4 +1,4 @@
-using API.Consumers;
+﻿using API.Consumers;
 using Application.Features.Orders.Commands.CreateOrder;
 using Application.Interfaces;
 using Application.Services;
@@ -42,7 +42,7 @@ try
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
-                var response = ApiResponse<object>.Failure("Dữ liệu không hợp lệ", 400, errors);
+                var response = ApiResponse<object>.Failure("Dá»¯ liá»‡u khÃ´ng há»£p lá»‡", 400, errors);
                 return new BadRequestObjectResult(response);
             };
         });
@@ -54,7 +54,7 @@ try
 
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            Description = "Nhập token theo chuẩn: Bearer {token}",
+            Description = "Nháº­p token theo chuáº©n: Bearer {token}",
             Name = "Authorization",
             In = ParameterLocation.Header,
             Type = SecuritySchemeType.Http,
@@ -93,7 +93,7 @@ try
 
         x.UsingRabbitMq((context, cfg) =>
         {
-            cfg.Host("localhost", "/", h => {
+            cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "localhost", "/", h => {
                 h.Username("guest");
                 h.Password("guest");
             });
@@ -178,3 +178,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+
