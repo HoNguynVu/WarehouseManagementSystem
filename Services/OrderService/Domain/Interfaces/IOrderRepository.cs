@@ -11,5 +11,6 @@ namespace Domain.Interfaces
     public interface IOrderRepository : IGenericInterface<Order, string>
     {
         Task<IEnumerable<Order>> GetByAccountIdAsync(string accountId);
+        Task<IEnumerable<Order>> GetExpiredAwaitingPaymentOrdersAsync(int timeoutMinutes);
     }
 }

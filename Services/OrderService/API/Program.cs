@@ -143,6 +143,8 @@ try
     builder.Services.AddScoped<IOrderUow, UnitOfWorks>();
     builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+    builder.Services.AddHostedService<API.BackgroundServices.PaymentTimeoutBackgroundService>();
+
     var app = builder.Build();
 
     app.UseCorrelationId();

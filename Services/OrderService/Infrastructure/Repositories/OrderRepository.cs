@@ -32,5 +32,13 @@ namespace Infrastructure.Repositories
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<Order>> GetExpiredAwaitingPaymentOrdersAsync(int timeoutMinutes)
+        {
+            var thresholdTime = DateTimeOffset.UtcNow.AddMinutes(-timeoutMinutes);
+            return await _dbSet
+                .Where(o => o.Status == Domain.Enums.OrderStatus.AwaitingPayment && o.CreatedAt < thresholdTime)
+                .ToListAsync();
+        }
     }
 }
