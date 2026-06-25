@@ -1,8 +1,10 @@
-using HealthChecks.UI.Client;
+﻿using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using SharedLibrary.Observability;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,12 +18,43 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
+// Configure Rate Limiter
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 10,
+                QueueLimit = 0,
+                Window = TimeSpan.FromSeconds(10)
+            }));
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429; // Too Many Requests
+        await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
+    };
+
+    options.AddPolicy("fixed-window", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 10,
+                QueueLimit = 0,
+                Window = TimeSpan.FromSeconds(10)
+            }));
+});
+
 builder.Services.AddCorrelationIdPropagation();
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
-// Đăng ký Health Checks cho các infrastructure
 builder.Services.AddHealthChecks()
     .AddRabbitMQ(sp => new RabbitMQ.Client.ConnectionFactory { Uri = new Uri("amqp://guest:guest@localhost:5672") }.CreateConnectionAsync(), name: "RabbitMQ")
     .AddRedis("localhost:6379", name: "Redis Cache")
@@ -30,11 +63,9 @@ builder.Services.AddHealthChecks()
     .AddSqlServer("Server=localhost,1435;Database=OrderDb;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Order)")
     .AddSqlServer("Server=localhost,1434;Database=master;User Id=sa;Password=Vudz1234;TrustServerCertificate=True", name: "SQL Server (Identity)");
 
-// Đăng ký HealthChecks UI
 builder.Services.AddHealthChecksUI(setupSettings: setup =>
 {
     setup.AddHealthCheckEndpoint("System Health", "/health");
-    // Thời gian poll mặc định
     setup.SetEvaluationTimeInSeconds(10);
 }).AddInMemoryStorage();
 
@@ -42,21 +73,19 @@ var app = builder.Build();
 
 app.UseCors("CorsPolicy");
 app.UseCorrelationId();
+app.UseRateLimiter(); // Add Rate Limiter Middleware
 
-// Map endpoint cho Health Check (Trả về file JSON)
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
 
-// Map endpoint cho giao diện UI
 app.MapHealthChecksUI(options =>
 {
     options.UIPath = "/healthchecks-ui";
 });
 
-// Map định tuyến
 app.MapReverseProxy();
 
 app.Run();
